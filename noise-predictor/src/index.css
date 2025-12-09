@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@theme {
+  --color-main: #832161;
+  --color-main-secondary: #bdceea;
+  --color-alt: #ADFC92;
+  --color-background: #99B2DD;
+  --color-text: #000100;
+
+  --font-main: 'Lexend', sans-serif;
+}
+
+:root {
+  color-scheme: light;
+  --color-main: #832161;
+  --color-main-secondary: #bdceea;
+  --color-alt: #ADFC92;
+  --color-background: #99B2DD;
+  --color-text: #000100;
+  --font-main: 'Lexend', sans-serif;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-main);
+  margin: 0;
+  padding: 0;
+}
+
+/* Deep Culture Aesthetic (Brutalist) */
+.deep-panel {
+  @apply bg-white border-2;
+  border-color: var(--color-main);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
+}
+
+.deep-button {
+  @apply px-4 py-2 font-bold uppercase transition-transform disabled:opacity-50 disabled:cursor-not-allowed;
+  background-color: var(--color-alt);
+  border: 2px solid var(--color-main);
+  color: var(--color-main);
+}
+
+.deep-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+}
+
+.deep-input {
+  @apply bg-white p-2 font-bold focus:outline-none transition-colors;
+  border-bottom: 2px solid var(--color-main);
+  color: var(--color-main);
+}
+
+.deep-input:focus {
+  border-bottom-color: var(--color-alt);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  @apply uppercase font-medium;
+  font-family: var(--font-main);
+  color: var(--color-main);
+}

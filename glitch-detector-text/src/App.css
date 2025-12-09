@@ -1,0 +1,368 @@
+:root {
+  --color-text: #000100;
+  --color-main: #832161;
+  --color-main-secondary: #bdceea;
+  --color-alt: #ADFC92;
+  --color-background: #99B2DD;
+  --font-main: 'Lexend', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-main);
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-main);
+  color: var(--color-main);
+  text-transform: uppercase;
+  font-weight: 500;
+  margin-top: 0;
+}
+
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 3rem;
+  border-bottom: 4px solid var(--color-main);
+  padding-bottom: 2rem;
+}
+
+header h1 {
+  font-size: 3rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Mode Switcher */
+.mode-switcher {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.mode-btn {
+  background: transparent;
+  border: 2px solid var(--color-main);
+  color: var(--color-main);
+  padding: 0.5rem 1.5rem;
+  border-radius: 50px;
+  /* Rounded pill shape */
+  font-family: var(--font-main);
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  background-color: var(--color-alt);
+  transform: translateY(-2px);
+}
+
+.mode-btn.active {
+  background-color: var(--color-main);
+  color: white;
+}
+
+/* Main Layout */
+main {
+  display: grid;
+  grid-template-columns: 350px minmax(0, 1fr);
+  gap: 3rem;
+  align-items: start;
+}
+
+/* Left Column */
+.input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.webcam-container {
+  border: 4px solid var(--color-main);
+  border-radius: 0;
+  /* Sharp corners */
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 1;
+  background: black;
+  box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.1);
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Class Controls */
+.control-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 1rem;
+  border: 2px solid var(--color-main);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
+  transition: transform 0.1s;
+}
+
+.control-group:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.1);
+}
+
+.class-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex-grow: 1;
+  margin-right: 1rem;
+}
+
+.class-name-input {
+  border: none;
+  border-bottom: 2px solid var(--color-main);
+  font-family: var(--font-main);
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0.25rem 0;
+  width: 100%;
+  color: var(--color-main);
+  background: transparent;
+}
+
+.class-name-input:focus {
+  outline: none;
+  border-bottom-color: var(--color-alt);
+}
+
+.example-count {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.btn-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.train-btn,
+.delete-btn,
+.action-btn {
+  border: 2px solid var(--color-main);
+  font-family: var(--font-main);
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  transition: all 0.1s;
+}
+
+.train-btn {
+  background-color: var(--color-alt);
+  color: var(--color-main);
+}
+
+.train-btn:hover {
+  background-color: white;
+}
+
+.train-btn:active {
+  background-color: var(--color-main);
+  color: white;
+}
+
+.delete-btn {
+  background-color: #ff4d4d;
+  color: white;
+  border-color: #cc0000;
+  padding: 0.5rem 0.75rem;
+}
+
+.delete-btn:hover {
+  background-color: #ff1a1a;
+}
+
+.add-class-btn {
+  width: 100%;
+  padding: 1rem;
+  background: transparent;
+  border: 2px dashed var(--color-main);
+  color: var(--color-main);
+  font-family: var(--font-main);
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.add-class-btn:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-style: solid;
+}
+
+/* Right Column */
+.visualization-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.visualization-section h2 {
+  font-size: 1.5rem;
+  border-bottom: 2px solid var(--color-main);
+  padding-bottom: 0.5rem;
+  display: inline-block;
+}
+
+/* Global Actions */
+.global-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  background-color: white;
+  color: var(--color-main);
+}
+
+.action-btn:hover {
+  background-color: var(--color-main-secondary);
+}
+
+/* Inputs */
+.text-input-area {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid var(--color-main);
+  font-family: var(--font-main);
+  font-size: 1rem;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.bar-container {
+  flex-grow: 1;
+  height: 20px;
+  background-color: var(--color-bg);
+  border: 2px solid var(--color-main);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  /* For threshold marker */
+}
+
+.file-upload-label {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background-color: white;
+  border: 2px solid var(--color-main);
+  border-radius: 4px;
+  color: var(--color-main);
+  cursor: pointer;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-top: 0.5rem;
+}
+
+.file-upload-label:hover {
+  background-color: var(--color-alt);
+}
+
+/* Glitch Specific Styles */
+.glitch-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  mix-blend-mode: exclusion;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.glitch-active {
+  opacity: 1;
+  background: repeating-linear-gradient(0deg,
+      rgba(255, 0, 0, 0.5),
+      rgba(255, 0, 0, 0.5) 2px,
+      transparent 2px,
+      transparent 4px);
+  animation: glitch-anim 0.2s infinite;
+}
+
+@keyframes glitch-anim {
+  0% {
+    transform: translate(0)
+  }
+
+  20% {
+    transform: translate(-5px, 5px)
+  }
+
+  40% {
+    transform: translate(-5px, -5px)
+  }
+
+  60% {
+    transform: translate(5px, 5px)
+  }
+
+  80% {
+    transform: translate(5px, -5px)
+  }
+
+  100% {
+    transform: translate(0)
+  }
+}
+
+.status-indicator {
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+  padding: 1rem;
+  border: 4px solid var(--color-main);
+  background: white;
+}
+
+.status-normal {
+  color: green;
+  border-color: green;
+}
+
+.status-anomaly {
+  color: red;
+  border-color: red;
+  animation: pulse 0.5s infinite;
+}

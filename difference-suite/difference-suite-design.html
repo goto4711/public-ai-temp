@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Culture Admin</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- CORRECT FONT: Lexend (From Deep Culture Source) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* DEEP CULTURE BRAND COLORS */
+            --dc-magenta: #832161; 
+            --dc-blue: #2874fc;
+            --dc-bg: #f8f9fa;
+            --dc-text: #2c3e50;
+            
+            /* Layout Dimensions */
+            --sidebar-width: 270px;
+            --header-height: 90px;
+        }
+
+        body {
+            background-color: var(--dc-bg);
+            font-family: "Lexend", sans-serif;
+            color: var(--dc-text);
+            font-weight: 300;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        /* --- Header --- */
+        .navbar-custom {
+            background-color: #ffffff;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            height: var(--header-height);
+            z-index: 1000;
+        }
+        
+        .logo-img {
+            height: 65px;
+            width: auto;
+            margin-left: 10px;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: calc(100vh - var(--header-height));
+            position: fixed;
+            top: var(--header-height);
+            left: 0;
+            background: white;
+            border-right: 1px solid rgba(0,0,0,0.05);
+            overflow-y: auto;
+            padding-top: 30px;
+            padding-bottom: 50px;
+            z-index: 900;
+        }
+
+        /* Custom Scrollbar for sidebar */
+        .sidebar::-webkit-scrollbar {
+            width: 5px;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: #eee;
+            border-radius: 4px;
+        }
+
+        .nav-link {
+            color: #666;
+            font-weight: 400;
+            padding: 12px 30px;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .nav-link:hover {
+            color: var(--dc-magenta);
+            background-color: rgba(131, 33, 97, 0.05);
+        }
+
+        .nav-link.active {
+            color: var(--dc-magenta);
+            background-color: rgba(131, 33, 97, 0.1);
+            border-right: 4px solid var(--dc-magenta);
+            font-weight: 600;
+        }
+
+        .nav-link i {
+            width: 24px;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .nav-group-label {
+            padding: 25px 30px 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #999;
+            letter-spacing: 1px;
+        }
+
+        /* --- Main Content --- */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--header-height);
+            padding: 40px;
+        }
+
+        /* --- UI Elements --- */
+        .btn-primary {
+            background-color: var(--dc-magenta);
+            border-color: var(--dc-magenta);
+            padding: 8px 20px;
+            font-weight: 500;
+        }
+        
+        .btn-primary:hover {
+            background-color: #66184a;
+            border-color: #66184a;
+        }
+
+        .text-brand { color: var(--dc-magenta) !important; }
+
+        .card {
+            border: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .card-header {
+            background-color: transparent;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            font-weight: 600;
+            padding: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .progress-bar {
+            background-color: var(--dc-magenta);
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        @media (max-width: 992px) {
+            .sidebar { display: none; }
+            .main-content { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-custom fixed-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="#">
+                <img src="https://deep-culture.org/wp-content/themes/deepculture/img/deep-culture-logo.png" alt="Deep Culture" class="logo-img">
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item me-3">
+                        <a class="nav-link" href="#"><i class="fas fa-search"></i></a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                            <img src="https://ui-avatars.com/api/?name=Admin+User&background=832161&color=fff" class="avatar me-2">
+                            <span class="fw-bold text-dark">Admin</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="nav flex-column">
+            
+            <div class="nav-group-label">Main Menu</div>
+            <a href="#" class="nav-link active">
+                <i class="fas fa-chart-line me-3"></i> Dashboard
+            </a>
+
+            <div class="nav-group-label mt-2">Tools</div>
+            
+            <a href="#" class="nav-link"><i class="fas fa-search-plus me-3"></i> Detail Extractor</a>
+            <a href="#" class="nav-link"><i class="fas fa-border-none me-3"></i> Context Weaver</a>
+            <a href="#" class="nav-link"><i class="fas fa-bolt me-3"></i> Discontinuity Detector</a>
+            <a href="#" class="nav-link"><i class="fas fa-bullhorn me-3"></i> Ambiguity Amplifier</a>
+            <a href="#" class="nav-link"><i class="fas fa-compass me-3"></i> Latent Space Navigator</a>
+            <a href="#" class="nav-link"><i class="fas fa-bug me-3"></i> Glitch Detector</a>
+            <a href="#" class="nav-link"><i class="fas fa-wave-square me-3"></i> Noise Predictor</a>
+            <a href="#" class="nav-link"><i class="fas fa-sliders-h me-3"></i> Threshold Adjuster</a>
+            <a href="#" class="nav-link"><i class="fas fa-clone me-3"></i> Deep Vector Mirror</a>
+            <a href="#" class="nav-link"><i class="fas fa-project-diagram me-3"></i> Networked Narratives</a>
+
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        
+        <div class="d-flex justify-content-between align-items-end mb-5">
+            <div>
+                <h2 class="fw-bold mb-1">Deep Culture Tools</h2>
+                <p class="text-muted mb-0 fw-light">Monitoring and extraction of cultural data vectors.</p>
+            </div>
+            <button class="btn btn-primary rounded-pill px-4 shadow-sm"><i class="fas fa-play me-2"></i>Run Batch Analysis</button>
+        </div>
+
+        <!-- Top Stats Cards (3 Boxes) -->
+        <div class="row g-4 mb-4">
+            
+            <!-- Box 1: Visual Corpus -->
+            <div class="col-md-4">
+                <div class="card h-100 p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted text-uppercase mb-2" style="font-size: 0.8rem; letter-spacing: 1px;">Visual Corpus</h6>
+                            <h2 class="mb-0 fw-bold" style="color: var(--dc-magenta);">1.2M Images</h2>
+                        </div>
+                        <div class="icon-shape bg-light rounded-circle p-3 text-brand">
+                            <i class="fas fa-images fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Box 2: Text Corpus -->
+            <div class="col-md-4">
+                <div class="card h-100 p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted text-uppercase mb-2" style="font-size: 0.8rem; letter-spacing: 1px;">Text Corpus</h6>
+                            <h2 class="mb-0 fw-bold" style="color: var(--dc-blue);">850k Documents</h2>
+                        </div>
+                        <div class="icon-shape bg-light rounded-circle p-3" style="color: var(--dc-blue);">
+                            <i class="fas fa-file-alt fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Box 3: Processing Load -->
+            <div class="col-md-4">
+                <div class="card h-100 p-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted text-uppercase mb-2" style="font-size: 0.8rem; letter-spacing: 1px;">Processing Load</h6>
+                            <h2 class="mb-0 fw-bold text-dark">78%</h2>
+                            <div class="progress mt-2" style="height: 5px; width: 85%;">
+                                <div class="progress-bar bg-dark" style="width: 78%"></div>
+                            </div>
+                        </div>
+                        <div class="icon-shape bg-light rounded-circle p-3 text-dark">
+                            <i class="fas fa-microchip fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Main Chart Section: Difference Toolbox -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-white">
+                        <span>Difference Toolbox</span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary">Live</button>
+                            <button class="btn btn-outline-secondary active">History</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="deepChart" height="120"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header bg-white">Tool Status</div>
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item border-0 py-3 d-flex align-items-center">
+                            <i class="fas fa-check-circle text-success me-3"></i>
+                            <div>
+                                <h6 class="mb-0">Context Weaver</h6>
+                                <small class="text-muted">Operational - Idle</small>
+                            </div>
+                        </div>
+                        <div class="list-group-item border-0 py-3 d-flex align-items-center">
+                            <i class="fas fa-spinner fa-spin text-brand me-3"></i>
+                            <div>
+                                <h6 class="mb-0">Ambiguity Amplifier</h6>
+                                <small class="text-muted">Processing Batch #204</small>
+                            </div>
+                        </div>
+                        <div class="list-group-item border-0 py-3 d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle text-warning me-3"></i>
+                            <div>
+                                <h6 class="mb-0">Glitch Detector</h6>
+                                <small class="text-muted">Threshold warning</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        const ctx = document.getElementById('deepChart').getContext('2d');
+        
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(131, 33, 97, 0.2)'); 
+        gradient.addColorStop(1, 'rgba(131, 33, 97, 0)');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'],
+                datasets: [{
+                    label: 'Difference Intensity',
+                    data: [12, 19, 3, 5, 20, 15, 25],
+                    borderColor: '#832161',
+                    backgroundColor: gradient,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#832161',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: true, position: 'top' } },
+                scales: {
+                    y: { grid: { borderDash: [4, 4], color: '#eee' }, beginAtZero: true },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

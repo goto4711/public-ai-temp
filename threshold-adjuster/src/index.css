@@ -1,0 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-text: #000100;
+  --color-main: #832161;
+  --color-main-secondary: #bdceea;
+  --color-alt: #ADFC92;
+  --color-background: #99B2DD;
+  --font-main: 'Lexend', sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-main);
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-main);
+  color: var(--color-main);
+  text-transform: uppercase;
+  font-weight: 500;
+  margin-top: 0;
+  letter-spacing: -0.02em;
+}
+
+.threshold-line line {
+  stroke-dasharray: 4;
+  animation: dash 1s linear infinite;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -8;
+  }
+}

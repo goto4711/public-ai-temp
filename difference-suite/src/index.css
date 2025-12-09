@@ -1,0 +1,100 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+/* CSS Variables for Legacy Component Compatibility */
+:root {
+  --color-main: #832161;
+  --color-main-secondary: #f0e6eb;
+  --color-alt: #ADFC92;
+  --color-text: #2c3e50;
+  --color-secondary: #2874fc;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-text font-sans antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+
+  /* Cards */
+  .dc-card {
+    @apply bg-surface rounded-xl border border-border shadow-card overflow-hidden;
+  }
+
+  .dc-card-header {
+    @apply px-6 py-4 border-b border-border font-semibold flex items-center justify-between bg-transparent;
+  }
+
+  .dc-card-body {
+    @apply p-6;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply bg-main text-white px-5 py-2 rounded-md font-medium transition-colors hover:bg-main-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2;
+  }
+
+  .btn-outline {
+    @apply bg-transparent border border-border text-text px-4 py-1.5 rounded-md text-sm hover:bg-gray-50 transition-colors;
+  }
+
+  .btn-icon {
+    @apply p-2 rounded-full hover:bg-gray-100 text-text-muted transition-colors;
+  }
+
+  /* Navigation */
+  .nav-item {
+    @apply flex items-center gap-3 px-6 py-3 text-text-muted hover:bg-main/5 hover:text-main transition-colors text-sm font-medium border-r-4 border-transparent;
+  }
+
+  .nav-item.active {
+    @apply bg-main/10 text-main border-main font-semibold;
+  }
+
+  .nav-group-label {
+    @apply px-6 pt-6 pb-2 text-xs font-bold uppercase tracking-wider text-gray-400;
+  }
+
+  /* Form Elements */
+  .dc-input {
+    @apply w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-main focus:ring-1 focus:ring-main outline-none transition-all;
+  }
+
+  .dc-slider {
+    @apply w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer;
+  }
+
+  .dc-slider::-webkit-slider-thumb {
+    @apply appearance-none w-5 h-5 bg-main rounded-full border-2 border-white shadow-sm transition-transform hover:scale-110;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
