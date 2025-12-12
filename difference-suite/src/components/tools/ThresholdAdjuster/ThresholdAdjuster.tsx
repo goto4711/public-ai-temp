@@ -6,14 +6,46 @@ import CaseList from './components/CaseList';
 import { Sliders, Scale } from 'lucide-react';
 import ToolLayout from '../../shared/ToolLayout';
 
+import { useSuiteStore } from '../../../stores/suiteStore';
+import { parseCSV } from '../DiscontinuityDetector/utils/DataProcessor';
+
 const ThresholdAdjuster = () => {
+    const { dataset, activeItem, setActiveItem } = useSuiteStore();
     const [data, setData] = useState<any[]>([]);
     const [threshold, setThreshold] = useState(0.5);
 
+    const dataItems = dataset.filter(i =>
+        i.type === 'tabular' || i.type === 'timeseries' || i.name.endsWith('.json') || i.name.endsWith('.csv')
+    );
+
+    const selectedItem = dataset.find(i => i.id === activeItem);
+
     useEffect(() => {
-        const mockData = generateMockData(1000);
-        setData(mockData);
-    }, []);
+        if (selectedItem && selectedItem.content) {
+            loadData(selectedItem);
+        } else if (data.length === 0) {
+            setData(generateMockData(1000));
+        }
+    }, [selectedItem]);
+
+    const loadData = (item: any) => {
+        try {
+            let parsed = [];
+            if (item.name.endsWith('.json')) {
+                parsed = JSON.parse(item.content);
+            } else {
+                parsed = parseCSV(item.content);
+            }
+
+            // Normalize CSV data if needed (rename fields to match expected schema if possible, or just expect correct headers)
+            // Expect: risk_score, applicant_name, etc.
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                setData(parsed);
+            }
+        } catch (e) {
+            console.error("Failed to load data", e);
+        }
+    };
 
     const mainContent = (
         <div className="flex flex-col h-full gap-6">
@@ -59,6 +91,21 @@ const ThresholdAdjuster = () => {
 
     const sideContent = (
         <div className="flex flex-col h-full gap-6 p-1">
+            {/* Data Selector */}
+            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <label className="text-xs font-bold text-text-muted block mb-2">Select Dataset:</label>
+                <select
+                    className="deep-input w-full text-xs"
+                    value={activeItem || ''}
+                    onChange={(e) => setActiveItem(e.target.value)}
+                >
+                    <option value="" disabled>-- Choose Dataset --</option>
+                    {dataItems.map(item => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                    ))}
+                </select>
+            </div>
+
             {/* Impact Stats Panel */}
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden text-sm">
                 <div className="p-4 border-b border-gray-100 bg-gray-50/50">

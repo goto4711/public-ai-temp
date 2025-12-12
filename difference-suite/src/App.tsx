@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import MainLayout from './components/shared/MainLayout';
-import Dashboard from './components/dashboard/Dashboard';
+import { Dashboard } from './components/dashboard/Dashboard';
 import DeepVectorMirror from './components/tools/DeepVectorMirror/DeepVectorMirror';
 import AmbiguityAmplifier from './components/tools/AmbiguityAmplifier/AmbiguityAmplifier';
 import GlitchDetector from './components/tools/GlitchDetector/GlitchDetector';

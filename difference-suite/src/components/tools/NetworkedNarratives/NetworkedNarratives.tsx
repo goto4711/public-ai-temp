@@ -10,6 +10,7 @@ const DEFAULT_TEXT = "During World War II, the French Resistance played a critic
 const NetworkedNarratives = () => {
     const { dataset, activeItem } = useSuiteStore();
     const selectedItem = dataset.find(i => i.id === activeItem);
+    const textItems = useMemo(() => dataset.filter(i => i.type === 'text'), [dataset]);
 
     const [text, setText] = useState(DEFAULT_TEXT);
     const [graphData, setGraphData] = useState<any>({ nodes: [], links: [] });
@@ -121,23 +122,39 @@ const NetworkedNarratives = () => {
                     Narrative Input
                 </h2>
 
-                {selectedItem?.type === 'text' && (
-                    <div className="mb-3 px-3 py-2 bg-main/5 border border-main/20 rounded-lg flex items-center gap-2 text-main">
-                        <FileText className="w-3 h-3" />
-                        <span className="text-xs font-bold truncate">{selectedItem.name}</span>
+                {textItems.length > 0 && (
+                    <div className="mb-4">
+                        <label className="text-xs font-bold text-text-muted block mb-1">Load from Collection:</label>
+                        <select
+                            onChange={(e) => {
+                                const item = textItems.find(i => i.id === e.target.value);
+                                if (item && typeof item.content === 'string') {
+                                    setText(item.content);
+                                }
+                            }}
+                            className="w-full text-xs p-2 rounded border border-gray-300 focus:border-main focus:ring-1 focus:ring-main outline-none bg-white"
+                            defaultValue=""
+                        >
+                            <option value="" disabled>Select a document...</option>
+                            {textItems.map(item => (
+                                <option key={item.id} value={item.id}>
+                                    {item.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 )}
 
                 <textarea
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    className="dc-input flex-1 resize-none font-mono text-xs leading-relaxed p-3 mb-4"
+                    className="w-full flex-1 resize-none font-mono text-xs leading-relaxed p-3 mb-4 rounded border border-gray-300 focus:border-main focus:ring-1 focus:ring-main outline-none"
                     placeholder="Enter narrative text..."
                 />
 
                 <button
                     onClick={handleAnalyze}
-                    className="btn-primary w-full justify-center"
+                    className="deep-button w-full justify-center"
                 >
                     <Network className="w-4 h-4" />
                     Extract Network

@@ -56,3 +56,44 @@ export const processContexts = async (queryText, contexts) => {
 
     return results;
 };
+
+export const extractSemanticKeywords = async (fullText, count = 30) => {
+    if (!model) await loadModel();
+    if (!fullText || !fullText.trim()) return [];
+
+    // 1. Tokenize and clean
+    const words = fullText
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 3) // Filter short words/stops
+        .filter((w, i, arr) => arr.indexOf(w) === i); // Unique
+
+    if (words.length === 0) return [];
+
+    // Limit processing candidate pool
+    const candidates = words.slice(0, 500);
+
+    // 2. Embed the full text to get the "Topic Vector"
+    // Using a chunk of the text to represent the overall context
+    const contextStr = fullText.slice(0, 5000);
+    const textEmbeddingTensor = await model.embed([contextStr]);
+    const textVector = (await textEmbeddingTensor.array())[0];
+    textEmbeddingTensor.dispose();
+
+    // 3. Embed all candidate words simultaneously
+    const candidateEmbeddingsTensor = await model.embed(candidates);
+    const candidateVectors = await candidateEmbeddingsTensor.array();
+    candidateEmbeddingsTensor.dispose();
+
+    // 4. Calculate similarity of each word to the topic vector
+    const scoredWords = candidates.map((word, i) => ({
+        word: word,
+        score: cosineSimilarity(textVector, candidateVectors[i])
+    }));
+
+    // 5. Sort by semantic relevance (closest to the topic)
+    scoredWords.sort((a, b) => b.score - a.score);
+
+    return scoredWords.slice(0, count).map(dw => dw.word);
+};

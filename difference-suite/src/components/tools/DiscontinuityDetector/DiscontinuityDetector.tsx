@@ -4,9 +4,19 @@ import TimelineViz from './components/TimelineViz';
 import AnomalyInspector from './components/AnomalyInspector';
 import { generateMockData } from './utils/AnomalyDetector';
 import { DeepAnomalyDetector } from './utils/DeepAnomalyDetector';
+import { useSuiteStore } from '../../../stores/suiteStore';
+import { parseCSV } from './utils/DataProcessor';
 import ToolLayout from '../../shared/ToolLayout';
 
 const DiscontinuityDetector = () => {
+    const { dataset, activeItem, setActiveItem } = useSuiteStore();
+    const selectedItem = dataset.find(i => i.id === activeItem);
+
+    // Filter for compatible data types
+    const dataItems = dataset.filter(i =>
+        i.type === 'timeseries' || i.type === 'tabular' || i.name.endsWith('.json') || i.name.endsWith('.csv')
+    );
+
     const [data, setData] = useState<any[]>([]);
     const [selectedAnomaly, setSelectedAnomaly] = useState<any>(null);
     const [loading, setLoading] = useState(false);
@@ -14,10 +24,37 @@ const DiscontinuityDetector = () => {
     const [trainingLoss, setTrainingLoss] = useState<number | null>(null);
     const detectorRef = useRef(new DeepAnomalyDetector());
 
-    // Load mock data on start
+    // Load data: Prefer selected item, fallback to mock if empty
     useEffect(() => {
-        handleReset();
-    }, []);
+        if (selectedItem) {
+            loadFromItem(selectedItem);
+        } else if (data.length === 0) {
+            handleReset();
+        }
+    }, [selectedItem]);
+
+    const loadFromItem = async (item: any) => {
+        if (!item.content) return;
+
+        try {
+            let rawData: any[] = [];
+            // Parse based on type or content structure
+            if (item.name.endsWith('.json') || item.type === 'timeseries') {
+                rawData = JSON.parse(item.content as string);
+                // Handle various JSON shapes? Assuming generic array for now.
+                if (!Array.isArray(rawData)) throw new Error("JSON must be an array of objects");
+            } else {
+                // Assume CSV for everything else (tabular, text, or .csv)
+                rawData = parseCSV(item.content as string);
+            }
+
+            if (rawData && rawData.length > 5) {
+                await processDataWithModel(rawData);
+            }
+        } catch (error) {
+            console.error("Failed to load data from item:", error);
+        }
+    };
 
     const processDataWithModel = async (rawData: any[]) => {
         setLoading(true);
@@ -100,6 +137,21 @@ const DiscontinuityDetector = () => {
 
     const sideContent = (
         <div className="flex flex-col h-full gap-6 p-1">
+            {/* Data Selector */}
+            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <label className="text-xs font-bold text-text-muted block mb-2">Select Time Series Source:</label>
+                <select
+                    className="deep-input w-full text-xs"
+                    value={activeItem || ''}
+                    onChange={(e) => setActiveItem(e.target.value)}
+                >
+                    <option value="" disabled>-- Choose Dataset --</option>
+                    {dataItems.map(item => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                    ))}
+                </select>
+            </div>
+
             {/* Controls */}
             <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                 <button
@@ -108,7 +160,7 @@ const DiscontinuityDetector = () => {
                     disabled={loading}
                 >
                     <RefreshCw className="w-4 h-4" />
-                    Regenerate Timeline
+                    Generate Example Timeline
                 </button>
             </div>
 

@@ -7,20 +7,20 @@ export default {
     theme: {
         extend: {
             colors: {
-                main: '#832161', // Deep Magenta
+                main: 'var(--color-main)', // Deep Magenta #832161
                 'main-hover': '#66184a',
-                secondary: '#2874fc', // Deep Blue
-                bg: '#f8f9fa', // Light gray background
-                surface: '#ffffff', // White cards
-                text: '#2c3e50', // Dark text
-                'text-muted': '#6c757d',
-                border: 'rgba(0,0,0,0.05)',
+                alt: 'var(--color-alt)', // Neon Green #ADFC92
+                background: 'var(--color-background)', // Blue #99B2DD
+                surface: '#ffffff',
+                text: 'var(--color-text)', // Black #000100
+                'text-muted': '#666666',
+                border: 'var(--color-main)',
             },
             fontFamily: {
                 sans: ['Lexend', 'sans-serif'],
             },
             boxShadow: {
-                'card': '0 4px 20px rgba(0,0,0,0.02)',
+                'card': '4px 4px 0px rgba(0,0,0,0.1)',
             }
         },
     },

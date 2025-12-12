@@ -1,100 +1,94 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&display=swap');
 
-/* CSS Variables for Legacy Component Compatibility */
+/* Deep Culture Design System */
 :root {
+  --color-text: #000100;
   --color-main: #832161;
-  --color-main-secondary: #f0e6eb;
+  --color-main-secondary: #bdceea;
   --color-alt: #ADFC92;
-  --color-text: #2c3e50;
-  --color-secondary: #2874fc;
+  --color-background: #99B2DD;
+  --font-main: 'Lexend', sans-serif;
+  
+  /* Legacy/Tailwind mapping */
+  --color-border: var(--color-main);
+  --color-surface: #ffffff;
 }
 
 @layer base {
   body {
-    @apply bg-bg text-text font-sans antialiased;
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: var(--font-main);
+    line-height: 1.6;
+    @apply antialiased h-screen overflow-hidden;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply font-semibold tracking-tight;
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight uppercase text-main;
+    font-family: var(--font-main);
   }
 }
 
 @layer components {
-
-  /* Cards */
-  .dc-card {
-    @apply bg-surface rounded-xl border border-border shadow-card overflow-hidden;
-  }
-
-  .dc-card-header {
-    @apply px-6 py-4 border-b border-border font-semibold flex items-center justify-between bg-transparent;
-  }
-
-  .dc-card-body {
-    @apply p-6;
+  /* Cards / Panels */
+  .deep-panel {
+    @apply bg-white border-2 border-main shadow-[4px_4px_0px_rgba(0,0,0,0.1)];
   }
 
   /* Buttons */
-  .btn-primary {
-    @apply bg-main text-white px-5 py-2 rounded-md font-medium transition-colors hover:bg-main-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2;
+  .deep-button {
+    @apply px-4 py-2 font-semibold uppercase bg-alt border-2 border-main text-main cursor-pointer transition-transform duration-200 select-none;
+  }
+  
+  .deep-button:hover {
+    @apply -translate-y-[2px] shadow-[2px_2px_0px_rgba(0,0,0,0.1)];
+  }
+  
+  .deep-button:disabled {
+    @apply opacity-50 cursor-not-allowed transform-none shadow-none;
   }
 
-  .btn-outline {
-    @apply bg-transparent border border-border text-text px-4 py-1.5 rounded-md text-sm hover:bg-gray-50 transition-colors;
+  .deep-button-secondary {
+    @apply px-4 py-2 font-semibold uppercase bg-white border-2 border-main text-main cursor-pointer transition-transform duration-200 select-none;
   }
 
-  .btn-icon {
-    @apply p-2 rounded-full hover:bg-gray-100 text-text-muted transition-colors;
+  .deep-button-secondary:hover {
+    @apply bg-main/5 -translate-y-[2px] shadow-[2px_2px_0px_rgba(0,0,0,0.1)];
   }
 
-  /* Navigation */
+  /* Input */
+  .deep-input {
+    @apply w-full px-3 py-2 border-2 border-main bg-white text-main focus:outline-none focus:shadow-[2px_2px_0px_rgba(131,33,97,0.2)];
+  }
+
+  /* Navigation Item */
   .nav-item {
-    @apply flex items-center gap-3 px-6 py-3 text-text-muted hover:bg-main/5 hover:text-main transition-colors text-sm font-medium border-r-4 border-transparent;
+    @apply flex items-center gap-2 px-4 py-2 text-main/80 hover:text-main hover:bg-white/40 transition-colors cursor-pointer font-medium;
   }
-
+  
   .nav-item.active {
-    @apply bg-main/10 text-main border-main font-semibold;
-  }
-
-  .nav-group-label {
-    @apply px-6 pt-6 pb-2 text-xs font-bold uppercase tracking-wider text-gray-400;
-  }
-
-  /* Form Elements */
-  .dc-input {
-    @apply w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-main focus:ring-1 focus:ring-main outline-none transition-all;
-  }
-
-  .dc-slider {
-    @apply w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer;
-  }
-
-  .dc-slider::-webkit-slider-thumb {
-    @apply appearance-none w-5 h-5 bg-main rounded-full border-2 border-white shadow-sm transition-transform hover:scale-110;
+    @apply bg-white text-main font-bold border-r-4 border-main;
   }
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.05);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 3px;
+  background: var(--color-main);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #cbd5e1;
+  background: var(--color-main);
+  opacity: 0.8;
 }

@@ -4,13 +4,9 @@ import { useSuiteStore } from '../../stores/suiteStore';
 const Header = () => {
     return (
         <div className="h-[90px] bg-white border-b border-[rgba(0,0,0,0.05)] px-8 flex items-center justify-between z-20 sticky top-0">
-            {/* Logo Area */}
+            {/* Logo Area - Moved to Sidebar */}
             <div className="flex items-center gap-4">
-                <img
-                    src="https://deep-culture.org/wp-content/themes/deepculture/img/deep-culture-logo.png"
-                    alt="Deep Culture"
-                    className="h-12 w-auto"
-                />
+                {/* Empty placeholder or remove entirely if flex justifies correctly */}
             </div>
 
             {/* Right Actions */}

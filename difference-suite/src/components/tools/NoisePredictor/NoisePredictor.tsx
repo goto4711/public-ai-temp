@@ -7,7 +7,8 @@ import { useSuiteStore } from '../../../stores/suiteStore';
 import ToolLayout from '../../shared/ToolLayout';
 
 const NoisePredictor = () => {
-    const { dataset, activeItem } = useSuiteStore();
+    const { dataset, activeItem, setActiveItem } = useSuiteStore();
+    const imageItems = dataset.filter(i => i.type === 'image');
     const selectedItem = dataset.find(i => i.id === activeItem);
 
     const [model] = useState(new NoiseModel());
@@ -66,7 +67,10 @@ const NoisePredictor = () => {
         setEpoch(0);
 
         try {
-            await model.train(tensor, 50);
+            await model.train(tensor, 50, (e: number, l: number) => {
+                setEpoch(e + 1);
+                setLoss(l);
+            });
 
             const rec = model.predict(tensor);
             if (rec) {
@@ -85,31 +89,7 @@ const NoisePredictor = () => {
         }
     };
 
-    // Empty State: No image selected
-    if (!selectedItem || selectedItem.type !== 'image') {
-        const emptyMainContent = (
-            <div className="flex items-center justify-center h-full bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="text-center p-12">
-                    <Info className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <p className="text-xl mb-2 text-gray-600">Select an image from the dashboard</p>
-                    <p className="text-sm text-gray-400">Noise Predictor works with images only</p>
-                </div>
-            </div>
-        );
-        const emptySideContent = (
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm text-gray-500">
-                <p>Upload an image dataset and select an image to begin.</p>
-            </div>
-        );
-        return (
-            <ToolLayout
-                title="Noise Predictor"
-                subtitle="What the model cannot see: extracting residual noise from autoencoder compression"
-                mainContent={emptyMainContent}
-                sideContent={emptySideContent}
-            />
-        );
-    }
+    // Empty state handled in main render
 
     const mainContent = (
         <div className="flex flex-col h-full bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -175,6 +155,20 @@ const NoisePredictor = () => {
 
     const sideContent = (
         <div className="flex flex-col h-full gap-4 p-1">
+            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <label className="text-xs font-bold text-text-muted block mb-2">Select Target Image:</label>
+                <select
+                    className="deep-input w-full text-xs"
+                    value={activeItem || ''}
+                    onChange={(e) => setActiveItem(e.target.value)}
+                >
+                    <option value="" disabled>-- Choose Image --</option>
+                    {imageItems.map(item => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                    ))}
+                </select>
+            </div>
+
             {/* Controls Panel */}
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-4">
                 <div className="flex items-center gap-2 text-sm font-bold text-gray-700">

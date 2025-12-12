@@ -6,7 +6,8 @@ import { Info, Cpu } from 'lucide-react';
 import ToolLayout from '../../shared/ToolLayout';
 
 const DeepVectorMirror = () => {
-    const { dataset, activeItem } = useSuiteStore();
+    const { dataset, activeItem, setActiveItem } = useSuiteStore();
+    const imageItems = dataset.filter(i => i.type === 'image');
     const selectedItem = dataset.find(i => i.id === activeItem);
 
     const [vector, setVector] = useState<number[]>([]);
@@ -54,33 +55,62 @@ const DeepVectorMirror = () => {
     }, [selectedItem, noiseLevel, contextLevel]);
 
     const mainContent = (
-        <div className="h-full flex items-center justify-center relative p-6">
+        <div className="h-full flex flex-col p-6">
             {selectedItem ? (
-                <div className="flex flex-col items-center gap-4">
-                    {isProcessing && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10 text-main font-bold animate-pulse">
-                            Processing Vector...
+                <div className="flex-1 flex gap-6 min-h-0">
+                    {/* Left: Reality (Input) */}
+                    <div className="flex-1 flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                        <div className="px-4 py-2 border-b border-gray-200 bg-white flex justify-between items-center">
+                            <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Input (Reality)</span>
                         </div>
-                    )}
+                        <div className="flex-1 p-4 flex items-center justify-center overflow-hidden relative">
+                            {selectedItem.type === 'image' ? (
+                                <img
+                                    src={selectedItem.content as string}
+                                    alt="Target"
+                                    className="max-w-full max-h-full object-contain shadow-sm"
+                                />
+                            ) : (
+                                <div className="prose prose-sm max-w-none p-4 w-full h-full overflow-y-auto bg-white border border-gray-100 rounded text-xs font-mono whitespace-pre-wrap">
+                                    {selectedItem.content as string}
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
-                    {vector.length > 0 ? (
-                        <div className="border border-gray-200 shadow-sm">
-                            {/* @ts-ignore */}
-                            <VectorHeatmap vector={vector} width={400} height={400} />
+                    {/* Right: Representation (Vector) */}
+                    <div className="flex-1 flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden relative">
+                        <div className="px-4 py-2 border-b border-gray-200 bg-white flex justify-between items-center">
+                            <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Vector (Representation)</span>
+                            {isProcessing && <span className="text-xs text-main animate-pulse">Processing...</span>}
                         </div>
-                    ) : (
-                        <div className="w-[400px] h-[400px] bg-gray-50 flex items-center justify-center text-text-muted border-2 border-dashed border-gray-200 rounded-lg">
-                            Waiting for vectorization...
+                        <div className="flex-1 p-4 flex items-center justify-center overflow-hidden">
+                            {vector.length > 0 ? (
+                                <div className="border border-gray-200 shadow-sm bg-white p-1">
+                                    {/* @ts-ignore */}
+                                    <VectorHeatmap vector={vector} width={400} height={400} />
+                                </div>
+                            ) : (
+                                <div className="text-center text-text-muted text-xs">
+                                    {isProcessing ? 'Calculating...' : 'Waiting for vector...'}
+                                </div>
+                            )}
                         </div>
-                    )}
-                    <p className="text-xs text-text-muted text-center max-w-md">
-                        Visualization of the high-dimensional vector space. Each cell represents a neuron activation or embedding dimension.
-                    </p>
+                    </div>
                 </div>
             ) : (
-                <div className="text-center">
+                <div className="h-full flex flex-col items-center justify-center text-center">
                     <Info className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p className="text-text-muted">Select an item from the dashboard to begin analysis.</p>
+                </div>
+            )}
+
+            {/* Footer / Description */}
+            {selectedItem && (
+                <div className="mt-4 text-center">
+                    <p className="text-xs text-text-muted max-w-2xl mx-auto">
+                        <strong>Left:</strong> The raw input as perceived by humans. <strong>Right:</strong> The internal mathematical representation (embedding) used by the AI. Note how the "Context Shift" alters the representation even if the input image stays the same.
+                    </p>
                 </div>
             )}
         </div>
@@ -88,16 +118,18 @@ const DeepVectorMirror = () => {
 
     const sideContent = (
         <div className="flex flex-col gap-6 p-1">
-            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-2">
-                <h4 className="text-xs font-bold text-secondary uppercase mb-1">Active Target</h4>
-                {selectedItem ? (
-                    <div>
-                        <div className="font-semibold text-sm truncate mb-0.5">{selectedItem.name}</div>
-                        <div className="text-xs text-text-muted uppercase">{selectedItem.type} Input</div>
-                    </div>
-                ) : (
-                    <div className="text-sm text-text-muted italic">No item selected</div>
-                )}
+            <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm mb-2">
+                <label className="text-xs font-bold text-text-muted block mb-2">Select Target Image:</label>
+                <select
+                    className="deep-input w-full text-xs"
+                    value={activeItem || ''}
+                    onChange={(e) => setActiveItem(e.target.value)}
+                >
+                    <option value="" disabled>-- Choose Image --</option>
+                    {imageItems.map(item => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                    ))}
+                </select>
             </div>
 
             {/* Controls */}
@@ -114,6 +146,9 @@ const DeepVectorMirror = () => {
                     <span>{noiseLevel.toFixed(2)}</span>
                     <span>Chaotic</span>
                 </div>
+                <p className="text-xs text-text-muted mt-2 leading-relaxed opacity-80">
+                    Randomly perturbs vector values to simulate signal degradation or input corruption. Tests how "robust" the AI's understanding is.
+                </p>
             </div>
 
             <div>
@@ -129,6 +164,9 @@ const DeepVectorMirror = () => {
                     <span>{contextLevel.toFixed(2)}</span>
                     <span>Biased</span>
                 </div>
+                <p className="text-xs text-text-muted mt-2 leading-relaxed opacity-80">
+                    Systematically alters the vector space (sine wave addition). Simulates changing the semantic context or background. Tests if the meaning holds.
+                </p>
             </div>
 
             <div className="mt-4 pt-4 border-t border-gray-100">
@@ -146,6 +184,27 @@ const DeepVectorMirror = () => {
                         <span className="font-bold">
                             {vector.length > 0 ? (vector.filter(v => Math.abs(v) < 0.01).length / vector.length * 100).toFixed(0) : '-'}%
                         </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Legend */}
+            <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm font-bold">Visualization Legend</span>
+                </div>
+                <div className="grid grid-cols-1 gap-2 text-xs">
+                    <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
+                        <span className="text-text-muted">High Positive Activation (Red)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-black rounded-sm border border-gray-600"></div>
+                        <span className="text-text-muted">Neutral / Near Zero (Black)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
+                        <span className="text-text-muted">High Negative Activation (Blue)</span>
                     </div>
                 </div>
             </div>

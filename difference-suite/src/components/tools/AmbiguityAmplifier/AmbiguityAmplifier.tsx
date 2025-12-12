@@ -11,7 +11,8 @@ interface Prediction {
 }
 
 const AmbiguityAmplifier = () => {
-    const { dataset, activeItem } = useSuiteStore();
+    const { dataset, activeItem, setActiveItem } = useSuiteStore();
+    const imageItems = dataset.filter(i => i.type === 'image');
     const selectedItem = dataset.find(i => i.id === activeItem);
 
     const [predictions, setPredictions] = useState<Prediction[]>([]);
@@ -88,6 +89,20 @@ const AmbiguityAmplifier = () => {
 
     const sideContent = (
         <div className="flex flex-col gap-6 p-1">
+            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <label className="text-xs font-bold text-text-muted block mb-2">Select Target Image:</label>
+                <select
+                    className="deep-input w-full text-xs"
+                    value={activeItem || ''}
+                    onChange={(e) => setActiveItem(e.target.value)}
+                >
+                    <option value="" disabled>-- Choose Image --</option>
+                    {imageItems.map(item => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                    ))}
+                </select>
+            </div>
+
             {/* Status Header */}
             <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-text-muted uppercase tracking-wider">Neural Net Status</span>

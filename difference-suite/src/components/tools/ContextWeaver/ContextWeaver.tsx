@@ -3,7 +3,7 @@ import { Search, Info, FileText } from 'lucide-react';
 import RadialViz from './components/RadialViz';
 import ComparisonTable from './components/ComparisonTable';
 import VectorInspector from './components/VectorInspector';
-import { loadModel, processContexts } from './utils/ContextProcessor';
+import { loadModel, processContexts, extractSemanticKeywords } from './utils/ContextProcessor';
 import { useSuiteStore } from '../../../stores/suiteStore';
 import ToolLayout from '../../shared/ToolLayout';
 
@@ -26,7 +26,7 @@ const DEMO_CONTEXTS = [
 ];
 
 const ContextWeaver = () => {
-    const { dataset, activeItem } = useSuiteStore();
+    const { dataset, activeItem, collections } = useSuiteStore();
     const selectedItem = dataset.find(i => i.id === activeItem);
 
     const [queryText, setQueryText] = useState("");
@@ -40,6 +40,48 @@ const ContextWeaver = () => {
     const effectiveQuery = selectedItem?.type === 'text'
         ? (selectedItem.content as string).slice(0, 200) // Limit length
         : queryText;
+
+    const handleLoadCollection = async (index: number, collectionId: string) => {
+        const collection = collections.find(c => c.id === collectionId);
+        if (!collection) return;
+
+        setLoading(true);
+        setStatus("Extracting semantic concepts...");
+
+        try {
+            const collectionItems = dataset.filter(i => i.collectionId === collectionId && i.type === 'text');
+            const allContent = collectionItems.map(i => i.content as string).join("\n");
+
+            let keywords: string[] = [];
+
+            if (allContent.trim().length > 0) {
+                // Use semantic extraction (TF + Embedding Similarity)
+                keywords = await extractSemanticKeywords(allContent, 30);
+            }
+
+            // Fallback
+            if (keywords.length === 0) {
+                if (collectionItems.length > 0) {
+                    keywords = collectionItems.slice(0, 20).map(i => i.name);
+                } else {
+                    keywords = ["(Empty Collection)"];
+                }
+            }
+
+            const newContexts = [...contexts];
+            newContexts[index] = {
+                ...newContexts[index],
+                name: collection.name,
+                items: keywords
+            };
+            setContexts(newContexts);
+        } catch (err) {
+            console.error("Failed to extract context", err);
+        } finally {
+            setLoading(false);
+            setStatus("");
+        }
+    };
 
     const handleAnalyze = async () => {
         const query = effectiveQuery.trim();
@@ -191,10 +233,24 @@ const ContextWeaver = () => {
                 <div className="flex-1 overflow-y-auto space-y-3 min-h-0 pr-1">
                     {contexts.map((context, i) => (
                         <div key={i} className="p-3 bg-gray-50 rounded border-l-4" style={{ borderLeftColor: context.color }}>
-                            <h3 className="font-bold text-xs mb-1" style={{ color: context.color }}>
-                                {context.name}
-                            </h3>
-                            <p className="text-[10px] text-text-muted leading-relaxed">
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="font-bold text-xs" style={{ color: context.color }}>
+                                    {context.name}
+                                </h3>
+                            </div>
+
+                            <select
+                                className="w-full text-[10px] mb-2 border border-gray-200 bg-white rounded p-1 text-text-muted focus:text-main"
+                                onChange={(e) => handleLoadCollection(i, e.target.value)}
+                                value=""
+                            >
+                                <option value="" disabled>Load Collection...</option>
+                                {collections.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+
+                            <p className="text-[10px] text-text-muted leading-relaxed line-clamp-4">
                                 {context.items.join(", ")}
                             </p>
                         </div>

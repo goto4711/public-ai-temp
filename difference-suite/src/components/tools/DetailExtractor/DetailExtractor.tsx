@@ -56,7 +56,20 @@ const DetailExtractor = () => {
 
     const handleUseDataset = () => {
         if (textItems.length === 0) return;
-        const texts = textItems.map(item => (item.content as string).slice(0, 500));
+
+        // Filter out empty or placeholder content
+        const validItems = textItems.filter(item =>
+            item.content &&
+            item.content !== 'Pending text read...' &&
+            (item.content as string).length > 10
+        );
+
+        if (validItems.length === 0) {
+            alert("No valid text content found in dataset. Please upload text files.");
+            return;
+        }
+
+        const texts = validItems.map(item => (item.content as string).slice(0, 500));
         setUseDataset(true);
         handleProcess(texts);
     };
