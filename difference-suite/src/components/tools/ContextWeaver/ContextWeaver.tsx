@@ -26,7 +26,7 @@ const DEMO_CONTEXTS = [
 ];
 
 const ContextWeaver = () => {
-    const { dataset, activeItem, collections } = useSuiteStore();
+    const { dataset, activeItem, setActiveItem, collections } = useSuiteStore();
     const selectedItem = dataset.find(i => i.id === activeItem);
 
     const [queryText, setQueryText] = useState("");
@@ -35,10 +35,11 @@ const ContextWeaver = () => {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState("");
     const [selectedMatch, setSelectedMatch] = useState<any>(null);
+    const [inputMode, setInputMode] = useState<'query' | 'selection'>('query');
 
-    // Use selected text item as query if available
-    const effectiveQuery = selectedItem?.type === 'text'
-        ? (selectedItem.content as string).slice(0, 200) // Limit length
+    // Use selected text item as query if available and mode is selection
+    const effectiveQuery = inputMode === 'selection' && selectedItem?.type === 'text'
+        ? (selectedItem.content as string).slice(0, 500)
         : queryText;
 
     const handleLoadCollection = async (index: number, collectionId: string) => {
@@ -190,27 +191,62 @@ const ContextWeaver = () => {
     const sideContent = (
         <div className="flex flex-col h-full gap-6 p-1">
             {/* Query Section */}
+            {/* Query Section */}
             <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                 <h2 className="text-sm font-bold mb-3 flex items-center gap-2 uppercase tracking-wide text-text-muted">
                     <Search className="w-4 h-4" />
-                    Query
+                    Input Source
                 </h2>
 
-                {selectedItem?.type === 'text' ? (
-                    <div className="mb-4 p-3 bg-main/5 border border-main/20 rounded-lg">
-                        <div className="flex items-center gap-2 mb-2 text-main">
-                            <FileText className="w-4 h-4" />
-                            <span className="font-bold text-xs truncate">{selectedItem.name}</span>
-                        </div>
-                        <p className="text-xs text-text-muted line-clamp-3 italic">"{effectiveQuery}"</p>
+                {/* Mode Toggles */}
+                <div className="flex bg-gray-100 p-1 rounded-lg mb-4">
+                    <button
+                        onClick={() => setInputMode('query')}
+                        className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-all ${inputMode === 'query'
+                            ? 'bg-white text-main shadow-sm'
+                            : 'text-text-muted hover:text-main'
+                            }`}
+                    >
+                        Custom Text
+                    </button>
+                    <button
+                        onClick={() => setInputMode('selection')}
+                        className={`flex-1 text-xs font-bold py-1.5 rounded-md transition-all ${inputMode === 'selection'
+                            ? 'bg-white text-main shadow-sm'
+                            : 'text-text-muted hover:text-main'
+                            }`}
+                    >
+                        From Collection
+                    </button>
+                </div>
+
+                {inputMode === 'selection' ? (
+                    <div className="mb-4">
+                        <label className="text-xs font-bold text-text-muted block mb-2">Select Text File:</label>
+                        <select
+                            className="deep-input w-full text-xs"
+                            value={activeItem && selectedItem?.type === 'text' ? activeItem : ''}
+                            onChange={(e) => setActiveItem(e.target.value)}
+                        >
+                            <option value="" disabled>-- Choose Text --</option>
+                            {dataset.filter(i => i.type === 'text').map(item => (
+                                <option key={item.id} value={item.id}>{item.name}</option>
+                            ))}
+                        </select>
+
+                        {selectedItem?.type === 'text' && (
+                            <div className="mt-2 p-2 bg-main/5 border border-main/10 rounded text-xs italic text-text-muted line-clamp-3">
+                                "{String(selectedItem.content).slice(0, 150)}..."
+                            </div>
+                        )}
                     </div>
                 ) : (
-                    <div className="flex gap-4 mb-4">
+                    <div className="mb-4">
                         <textarea
                             value={queryText}
                             onChange={(e) => setQueryText(e.target.value)}
-                            placeholder="Enter text..."
-                            className="dc-input resize-none h-24 text-sm"
+                            placeholder="Enter text to analyze..."
+                            className="deep-input w-full resize-none h-32 text-sm"
                         />
                     </div>
                 )}
@@ -218,10 +254,10 @@ const ContextWeaver = () => {
                 <button
                     onClick={handleAnalyze}
                     disabled={loading || !effectiveQuery.trim()}
-                    className="btn-primary w-full justify-center"
+                    className="deep-button w-full justify-center"
                 >
                     <Search className="w-4 h-4" />
-                    Analyze
+                    Analyze Contexts
                 </button>
             </div>
 

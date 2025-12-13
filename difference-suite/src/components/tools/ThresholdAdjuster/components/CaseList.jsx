@@ -32,19 +32,8 @@ const CaseList = ({ data, threshold }) => {
                             const isAccepted = item.risk_score >= threshold;
                             const isDoubt = Math.abs(item.risk_score - threshold) < 0.05;
 
-                            let bgStyle = {};
-                            if (isDoubt) {
-                                bgStyle = { backgroundColor: 'var(--color-main-secondary)' };
-                            } else if (isAccepted) {
-                                // Green tint: #ADFC92 -> rgba(173, 252, 146, 0.2)
-                                bgStyle = { backgroundColor: 'rgba(173, 252, 146, 0.2)' };
-                            } else {
-                                // Purple tint: #832161 -> rgba(131, 33, 97, 0.1)
-                                bgStyle = { backgroundColor: 'rgba(131, 33, 97, 0.1)' };
-                            }
-
                             return (
-                                <tr key={item.id} className="transition-colors border-b border-[var(--color-main)]/20 hover:opacity-80" style={bgStyle}>
+                                <tr key={item.id} className="transition-colors border-b border-[var(--color-main)]/20 hover:bg-[var(--color-main)]/10 bg-[var(--color-main)]/5">
                                     <td className="px-4 py-3 font-mono text-[var(--color-text)] opacity-70">{item.id}</td>
                                     <td className="px-4 py-3 font-bold text-[var(--color-main)]">{item.origin}</td>
                                     <td className="px-4 py-3 font-mono font-bold">

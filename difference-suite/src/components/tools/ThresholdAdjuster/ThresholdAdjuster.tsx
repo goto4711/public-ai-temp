@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { generateMockData } from './data/mockData';
+import { generateMockData } from './data/mockData.js';
 import ThresholdHistogram from './components/ThresholdHistogram';
 import ImpactStats from './components/ImpactStats';
 import CaseList from './components/CaseList';
-import { Sliders, Scale } from 'lucide-react';
+import { Sliders, Scale, RefreshCw } from 'lucide-react';
 import ToolLayout from '../../shared/ToolLayout';
 
 import { useSuiteStore } from '../../../stores/suiteStore';
-import { parseCSV } from '../DiscontinuityDetector/utils/DataProcessor';
+import { parseCSV } from '../DiscontinuityDetector/utils/DataProcessor.js';
 
 const ThresholdAdjuster = () => {
     const { dataset, activeItem, setActiveItem } = useSuiteStore();
@@ -40,7 +40,34 @@ const ThresholdAdjuster = () => {
             // Normalize CSV data if needed (rename fields to match expected schema if possible, or just expect correct headers)
             // Expect: risk_score, applicant_name, etc.
             if (Array.isArray(parsed) && parsed.length > 0) {
-                setData(parsed);
+                let normalized = parsed.map((p, idx) => ({
+                    ...p,
+                    id: p.id || p.ID || `CASE-${idx + 1}`,
+                    origin: p.origin || p.source || p.location || p.country || "Uploaded Data",
+                    case_summary: p.case_summary || p.summary || p.description || p.text || p.content || "No summary provided.",
+                    applicant_name: p.applicant_name || p.name || p.applicant || `Applicant ${idx + 1}`,
+                    risk_score: p.risk_score !== undefined ? Number(p.risk_score) : (p.value !== undefined ? Number(p.value) : undefined)
+                })).filter(p => p.risk_score !== undefined && !isNaN(p.risk_score));
+
+                if (normalized.length > 0) {
+                    // Auto-normalize if values are outside [0, 1]
+                    const scores = normalized.map(p => p.risk_score as number);
+                    const min = Math.min(...scores);
+                    const max = Math.max(...scores);
+
+                    if (max > 1 || min < 0) {
+                        const range = max - min;
+                        normalized = normalized.map(p => ({
+                            ...p,
+                            original_score: p.risk_score,
+                            risk_score: range > 0 ? ((p.risk_score as number) - min) / range : 0.5
+                        }));
+                    }
+
+                    setData(normalized);
+                } else {
+                    console.warn("Parsed data contained no valid risk_score or value fields.");
+                }
             }
         } catch (e) {
             console.error("Failed to load data", e);
@@ -89,21 +116,36 @@ const ThresholdAdjuster = () => {
         </div>
     );
 
+    const handleReset = () => {
+        setActiveItem(null);
+        setData(generateMockData(1000));
+    };
+
     const sideContent = (
         <div className="flex flex-col h-full gap-6 p-1">
             {/* Data Selector */}
             <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                 <label className="text-xs font-bold text-text-muted block mb-2">Select Dataset:</label>
-                <select
-                    className="deep-input w-full text-xs"
-                    value={activeItem || ''}
-                    onChange={(e) => setActiveItem(e.target.value)}
-                >
-                    <option value="" disabled>-- Choose Dataset --</option>
-                    {dataItems.map(item => (
-                        <option key={item.id} value={item.id}>{item.name}</option>
-                    ))}
-                </select>
+                <div className="flex flex-col gap-2">
+                    <select
+                        className="deep-input w-full text-xs"
+                        value={activeItem || ''}
+                        onChange={(e) => setActiveItem(e.target.value)}
+                    >
+                        <option value="" disabled>-- Choose Dataset --</option>
+                        {dataItems.map(item => (
+                            <option key={item.id} value={item.id}>{item.name}</option>
+                        ))}
+                    </select>
+
+                    <button
+                        onClick={handleReset}
+                        className="text-xs text-main/60 hover:text-main underline transition-colors flex items-center justify-center gap-1 mt-1"
+                    >
+                        <RefreshCw className="w-3 h-3" />
+                        Reset to Demo Data
+                    </button>
+                </div>
             </div>
 
             {/* Impact Stats Panel */}

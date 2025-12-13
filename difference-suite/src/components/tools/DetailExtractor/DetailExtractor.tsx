@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { RefreshCw, Info, Layers, Database } from 'lucide-react';
+import { RefreshCw, Info, Layers, Database, CheckSquare, Square } from 'lucide-react';
 import ClusterViz from './components/ClusterViz';
 import DetailView from './components/DetailView';
 import { processTextData, loadModels } from './utils/DataProcessor';
@@ -22,7 +22,7 @@ const DEMO_TEXTS = [
 ];
 
 const DetailExtractor = () => {
-    const { dataset } = useSuiteStore();
+    const { dataset, collections } = useSuiteStore();
     const textItems = dataset.filter(item => item.type === 'text');
 
     const [data, setData] = useState<any[]>([]);
@@ -30,6 +30,12 @@ const DetailExtractor = () => {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState("Ready");
     const [useDataset, setUseDataset] = useState(false);
+    const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
+
+    // Filter collections that actually have text data
+    const textCollections = collections.filter(col =>
+        dataset.some(item => item.collectionId === col.id && item.type === 'text')
+    );
 
     useEffect(() => {
         handleProcess(DEMO_TEXTS);
@@ -54,22 +60,29 @@ const DetailExtractor = () => {
         }
     };
 
-    const handleUseDataset = () => {
-        if (textItems.length === 0) return;
+    const toggleCollection = (id: string) => {
+        setSelectedCollectionIds(prev =>
+            prev.includes(id)
+                ? prev.filter(x => x !== id)
+                : [...prev, id]
+        );
+    };
 
-        // Filter out empty or placeholder content
-        const validItems = textItems.filter(item =>
+    const handleAnalyzeSelected = () => {
+        const itemsToProcess = dataset.filter(item =>
+            item.collectionId &&
+            selectedCollectionIds.includes(item.collectionId) &&
+            item.type === 'text' &&
             item.content &&
-            item.content !== 'Pending text read...' &&
             (item.content as string).length > 10
         );
 
-        if (validItems.length === 0) {
-            alert("No valid text content found in dataset. Please upload text files.");
+        if (itemsToProcess.length === 0) {
+            alert("No valid text content found in selected collections.");
             return;
         }
 
-        const texts = validItems.map(item => (item.content as string).slice(0, 500));
+        const texts = itemsToProcess.map(item => (item.content as string).slice(0, 500));
         setUseDataset(true);
         handleProcess(texts);
     };
@@ -119,19 +132,51 @@ const DetailExtractor = () => {
                 </h2>
 
                 <div className="flex flex-col gap-3">
-                    {textItems.length > 0 && (
-                        <button
-                            onClick={handleUseDataset}
-                            disabled={loading || useDataset}
-                            className={`deep-button w-full justify-center ${useDataset ? 'opacity-50 cursor-default' : ''}`}
-                        >
-                            Use Dataset ({textItems.length} texts)
-                        </button>
+                    {/* Collection List */}
+                    {textCollections.length > 0 ? (
+                        <div className="flex flex-col gap-2 mb-2 max-h-32 overflow-y-auto pr-1">
+                            {textCollections.map(col => {
+                                const isSelected = selectedCollectionIds.includes(col.id);
+                                return (
+                                    <button
+                                        key={col.id}
+                                        onClick={() => toggleCollection(col.id)}
+                                        className={`flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors text-left w-full ${isSelected ? 'bg-main/5 text-main font-bold' : 'hover:bg-gray-50 text-gray-600'}`}
+                                    >
+                                        {isSelected ? (
+                                            <CheckSquare className="w-4 h-4 shrink-0" />
+                                        ) : (
+                                            <Square className="w-4 h-4 shrink-0 opacity-50" />
+                                        )}
+                                        <span className="truncate">{col.name}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <p className="text-xs text-gray-400 italic mb-2">
+                            No text collections found. Create a collection with text files in the Dashboard.
+                        </p>
                     )}
+
                     <button
-                        onClick={() => { setUseDataset(false); handleProcess(DEMO_TEXTS); }}
+                        onClick={handleAnalyzeSelected}
+                        disabled={loading || selectedCollectionIds.length === 0}
+                        className="deep-button w-full justify-center disabled:opacity-50"
+                    >
+                        Analyze Selected ({selectedCollectionIds.length})
+                    </button>
+
+                    <div className="h-px bg-gray-100 my-1" />
+
+                    <button
+                        onClick={() => {
+                            setUseDataset(false);
+                            setSelectedCollectionIds([]);
+                            handleProcess(DEMO_TEXTS);
+                        }}
                         className="deep-button bg-white text-main border-main w-full justify-center hover:bg-gray-50"
-                        disabled={loading || !useDataset}
+                        disabled={loading || (!useDataset && selectedCollectionIds.length === 0)}
                     >
                         <RefreshCw className="w-4 h-4" />
                         Reset Demo

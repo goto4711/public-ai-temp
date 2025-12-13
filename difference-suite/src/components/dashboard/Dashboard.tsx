@@ -110,7 +110,9 @@ export const Dashboard: React.FC = () => {
 
         const newItems = await Promise.all(Array.from(files).map(async (file) => {
             const isImage = file.type.startsWith('image/');
-            const type = isImage ? 'image' : 'text';
+            const type = isImage ? 'image' :
+                file.name.endsWith('.csv') ? 'tabular' :
+                    file.name.endsWith('.json') ? 'timeseries' : 'text';
             const content = await readFileContent(file);
 
             return {

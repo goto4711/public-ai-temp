@@ -9,9 +9,10 @@ const ThresholdHistogram = ({ data, threshold, setThreshold }) => {
 
     // Effect 1: Initialize Chart & Data (Runs on Data Change)
     useEffect(() => {
-        if (!data || data.length === 0) return;
+        if (!data || data.length === 0 || !wrapperRef.current) return;
 
         const width = wrapperRef.current.clientWidth;
+        if (!width) return;
         const height = 200;
         const margin = { top: 20, right: 30, bottom: 40, left: 40 };
         const innerWidth = width - margin.left - margin.right;
