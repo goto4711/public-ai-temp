@@ -1,4 +1,4 @@
-export type DataType = 'image' | 'text' | 'timeseries' | 'tabular';
+export type DataType = 'image' | 'text' | 'timeseries' | 'tabular' | 'audio';
 
 export interface Collection {
     id: string;

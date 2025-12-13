@@ -4,12 +4,16 @@ import { CollectionSidebar } from './CollectionSidebar';
 import { DataGrid } from './DataGrid';
 import { ContextPanel } from './ContextPanel';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FolderUp } from 'lucide-react';
+import { Upload, FolderUp, Camera, Mic } from 'lucide-react';
 import type { DataItem } from '../../types';
+import { WebcamModal } from './modals/WebcamModal';
+import { AudioRecorderModal } from './modals/AudioRecorderModal';
 
 export const Dashboard: React.FC = () => {
     const { dataset, addItems, createCollection } = useSuiteStore();
     const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
+    const [isWebcamOpen, setIsWebcamOpen] = useState(false);
+    const [isMicOpen, setIsMicOpen] = useState(false);
 
     // Filter items by collection
     const filteredItems = useMemo(() => {
@@ -21,7 +25,9 @@ export const Dashboard: React.FC = () => {
     const readFileContent = (file: File): Promise<string> => {
         return new Promise((resolve) => {
             const isImage = file.type.startsWith('image/');
-            if (isImage) {
+            const isAudio = file.type.startsWith('audio/');
+
+            if (isImage || isAudio) {
                 resolve(URL.createObjectURL(file));
                 return;
             }
@@ -34,6 +40,29 @@ export const Dashboard: React.FC = () => {
             reader.onerror = () => resolve('Error reading file');
             reader.readAsText(file);
         });
+    };
+
+    const handleMediaCapture = async (file: File) => {
+        const content = await readFileContent(file);
+        // Determine type based on file
+        let type: 'image' | 'audio' | 'text' = 'text';
+        if (file.type.startsWith('image/')) type = 'image';
+        else if (file.type.startsWith('audio/')) type = 'audio';
+
+        const newItem: DataItem = {
+            id: crypto.randomUUID(),
+            name: file.name,
+            type: type as any,
+            content,
+            rawFile: file,
+            collectionId: activeCollectionId || undefined,
+            metadata: {
+                size: file.size,
+                lastModified: file.lastModified,
+                mimeType: file.type
+            }
+        };
+        addItems([newItem]);
     };
 
     // Handle File Drop
@@ -129,6 +158,22 @@ export const Dashboard: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setIsWebcamOpen(true)}
+                            className="flex items-center justify-center w-9 h-9 border-2 border-transparent hover:border-main bg-transparent hover:bg-white text-main transition-all"
+                            title="Capture Photo"
+                        >
+                            <Camera className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={() => setIsMicOpen(true)}
+                            className="flex items-center justify-center w-9 h-9 border-2 border-transparent hover:border-main bg-transparent hover:bg-white text-main transition-all"
+                            title="Record Audio"
+                        >
+                            <Mic className="w-5 h-5" />
+                        </button>
+                        <div className="w-px h-6 bg-main/20 mx-1" />
+
                         {/* Hidden Folder Input Hack */}
                         <div className="relative overflow-hidden inline-block">
                             <button className="flex items-center gap-2 px-3 py-1.5 font-bold uppercase text-sm transition-transform hover:-translate-y-0.5 border-2 border-main bg-white text-main shadow-[2px_2px_0px_rgba(0,0,0,0.1)]">
@@ -168,6 +213,17 @@ export const Dashboard: React.FC = () => {
 
             {/* Context Panel */}
             <ContextPanel />
+
+            <WebcamModal
+                isOpen={isWebcamOpen}
+                onClose={() => setIsWebcamOpen(false)}
+                onCapture={handleMediaCapture}
+            />
+            <AudioRecorderModal
+                isOpen={isMicOpen}
+                onClose={() => setIsMicOpen(false)}
+                onCapture={handleMediaCapture}
+            />
         </div>
     );
 };
