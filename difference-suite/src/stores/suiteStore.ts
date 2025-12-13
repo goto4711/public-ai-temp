@@ -8,6 +8,13 @@ export const useSuiteStore = create<SuiteState>((set, get) => ({
     selectedItems: [],
     isProcessing: false,
 
+    // Auth
+    isAuthenticated: false,
+    userEmail: null,
+
+    login: (email) => set({ isAuthenticated: true, userEmail: email }),
+    logout: () => set({ isAuthenticated: false, userEmail: null }),
+
     addItem: (item) => set((state) => ({
         dataset: [...state.dataset, item],
         activeItem: state.activeItem || item.id, // Auto-select first item

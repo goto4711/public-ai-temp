@@ -60,4 +60,10 @@ export interface SuiteState {
 
     // Global
     clearDataset: () => void;
+
+    // Auth
+    isAuthenticated: boolean;
+    userEmail: string | null;
+    login: (email: string) => void;
+    logout: () => void;
 }

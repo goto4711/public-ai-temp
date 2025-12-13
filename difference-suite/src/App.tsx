@@ -5,6 +5,7 @@ import DeepVectorMirror from './components/tools/DeepVectorMirror/DeepVectorMirr
 import AmbiguityAmplifier from './components/tools/AmbiguityAmplifier/AmbiguityAmplifier';
 import GlitchDetector from './components/tools/GlitchDetector/GlitchDetector';
 import LatentSpaceNavigator from './components/tools/LatentSpaceNavigator/LatentSpaceNavigator';
+import { AuthGuard } from './components/auth/AuthGuard';
 // Temporarily commented out - need dependency fixes
 import ContextWeaver from './components/tools/ContextWeaver/ContextWeaver';
 import NetworkedNarratives from './components/tools/NetworkedNarratives/NetworkedNarratives';
@@ -19,21 +20,23 @@ function App() {
   return (
     <Router>
       <MainLayout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/deep-vector-mirror" element={<DeepVectorMirror />} />
-          <Route path="/ambiguity-amplifier" element={<AmbiguityAmplifier />} />
-          <Route path="/glitch-detector" element={<GlitchDetector />} />
-          <Route path="/latent-navigator" element={<LatentSpaceNavigator />} />
-          <Route path="/context-weaver" element={<ContextWeaver />} />
-          <Route path="/networked-narratives" element={<NetworkedNarratives />} />
-          <Route path="/detail-extractor" element={<DetailExtractor />} />
-          <Route path="/discontinuity-detector" element={<DiscontinuityDetector />} />
-          <Route path="/threshold-adjuster" element={<ThresholdAdjuster />} />
-          <Route path="/noise-predictor" element={<NoisePredictor />} />
-          <Route path="/imagination-inspector" element={<ImaginationInspector />} />
-          <Route path="*" element={<div className="p-8 text-center text-xl">Tool Coming Soon...</div>} />
-        </Routes>
+        <AuthGuard>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/deep-vector-mirror" element={<DeepVectorMirror />} />
+            <Route path="/ambiguity-amplifier" element={<AmbiguityAmplifier />} />
+            <Route path="/glitch-detector" element={<GlitchDetector />} />
+            <Route path="/latent-navigator" element={<LatentSpaceNavigator />} />
+            <Route path="/context-weaver" element={<ContextWeaver />} />
+            <Route path="/networked-narratives" element={<NetworkedNarratives />} />
+            <Route path="/detail-extractor" element={<DetailExtractor />} />
+            <Route path="/discontinuity-detector" element={<DiscontinuityDetector />} />
+            <Route path="/threshold-adjuster" element={<ThresholdAdjuster />} />
+            <Route path="/noise-predictor" element={<NoisePredictor />} />
+            <Route path="/imagination-inspector" element={<ImaginationInspector />} />
+            <Route path="*" element={<div className="p-8 text-center text-xl">Tool Coming Soon...</div>} />
+          </Routes>
+        </AuthGuard>
       </MainLayout>
     </Router>
   );
