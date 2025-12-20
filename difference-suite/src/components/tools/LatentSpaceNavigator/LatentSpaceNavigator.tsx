@@ -71,7 +71,7 @@ const LatentSpaceNavigator = () => {
 
             for (const item of textItems) {
                 const keywords = await extractSemanticKeywords(item.content as string, 20);
-                keywords.forEach(k => allKeywords.add(k));
+                keywords.forEach((k: string) => allKeywords.add(k));
             }
 
             if (allKeywords.size > 0) {
