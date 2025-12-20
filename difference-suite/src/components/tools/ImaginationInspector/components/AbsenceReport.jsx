@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 const AbsenceReport = ({ report }) => {
     if (!report) return null;
@@ -9,50 +9,63 @@ const AbsenceReport = ({ report }) => {
             <div className="flex items-center gap-2 border-b-2 border-[var(--color-main)] pb-2">
                 <AlertTriangle className="text-[var(--color-main)]" />
                 <h2 className="text-xl font-bold uppercase text-[var(--color-main)]">
-                    Latent Space Inspector
+                    The Void Report
                 </h2>
             </div>
+            <p className="text-sm opacity-70 italic max-w-2xl">
+                What the model <strong>fails</strong> to imagine is as important as what it sees.
+                Dashed bars represent the "Ghost of Possibility"—concepts that exist in reality but are absent from the model's output.
+            </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Object.entries(report.categories).map(([category, data]) => (
-                    <div key={category} className="flex flex-col gap-2">
-                        <h3 className="font-bold uppercase text-sm bg-[var(--color-main)] text-white px-2 py-1 inline-block self-start">
-                            {category}
-                        </h3>
+                {Object.entries(report.categories).map(([category, data]) => {
+                    // Combine present and absent for a unified view
+                    const allTraits = [
+                        ...data.present.map(p => ({ ...p, type: 'present' })),
+                        ...data.absent.map(tag => ({ tag, percentage: 0, type: 'absent' }))
+                    ].sort((a, b) => {
+                        // Sort present first by %, then absent
+                        if (a.type !== b.type) return a.type === 'present' ? -1 : 1;
+                        return b.percentage - a.percentage;
+                    });
 
-                        {/* Presence Bar */}
-                        <div className="space-y-1">
-                            {data.present.map((item) => (
-                                <div key={item.tag} className="flex items-center gap-2 text-sm">
-                                    <div className="w-24 font-mono truncate text-right">{item.tag}</div>
-                                    <div className="flex-1 h-4 bg-gray-100 rounded-sm overflow-hidden border border-gray-200">
-                                        <div
-                                            className="h-full bg-[var(--color-main)]"
-                                            style={{ width: `${item.percentage}%` }}
-                                        ></div>
+                    return (
+                        <div key={category} className="flex flex-col gap-2">
+                            <h3 className="font-bold uppercase text-sm bg-[var(--color-main)] text-white px-2 py-1 inline-block self-start">
+                                {category}
+                            </h3>
+
+                            <div className="space-y-2 mt-2">
+                                {allTraits.map((item) => (
+                                    <div key={item.tag} className="flex flex-col gap-1 text-sm group">
+                                        <div className="flex justify-between items-end">
+                                            <span className={`font-mono text-xs ${item.type === 'absent' ? 'opacity-50 italic' : ''}`}>
+                                                {item.tag}
+                                            </span>
+                                            <span className="text-[10px] opacity-50">
+                                                {item.type === 'present' ? `${Math.round(item.percentage)}%` : 'VOID'}
+                                            </span>
+                                        </div>
+
+                                        {/* Bar Container */}
+                                        <div className="h-6 w-full relative">
+                                            {item.type === 'present' ? (
+                                                <div
+                                                    className="h-full bg-[var(--color-main)] transition-all duration-500"
+                                                    style={{ width: `${Math.max(item.percentage, 5)}%` }} // Min width for visibility
+                                                ></div>
+                                            ) : (
+                                                <div className="h-full w-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50/50">
+                                                    <span className="text-[10px] uppercase tracking-widest text-gray-300 font-bold">Absent</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="w-10 text-xs opacity-60">{Math.round(item.percentage)}%</div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Absences */}
-                        {data.absent.length > 0 && (
-                            <div className="mt-2 p-2 bg-red-50 border border-red-100 rounded text-sm">
-                                <div className="flex items-center gap-1 text-red-600 font-bold text-xs uppercase mb-1">
-                                    <XCircle size={12} /> Absent (0%)
-                                </div>
-                                <div className="flex flex-wrap gap-1">
-                                    {data.absent.map(tag => (
-                                        <span key={tag} className="px-1 bg-white border border-red-200 text-red-500 text-xs rounded">
-                                            {tag}
-                                        </span>
-                                    ))}
-                                </div>
+                                ))}
                             </div>
-                        )}
-                    </div>
-                ))}
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

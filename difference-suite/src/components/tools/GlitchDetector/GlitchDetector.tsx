@@ -2,10 +2,51 @@ import { useState, useEffect } from 'react';
 import { modelManager } from './components/GlitchModelManager';
 import { useSuiteStore } from '../../../stores/suiteStore';
 import * as tf from '@tensorflow/tfjs';
-import { AlertTriangle, Info, Target, Trash2, Activity, Shield } from 'lucide-react';
+import { AlertTriangle, Info, Target, Trash2, Activity, Shield, Image as ImageIcon, Type } from 'lucide-react';
 import ToolLayout from '../../shared/ToolLayout';
+import GlitchDetectorTextContent from '../GlitchDetectorText/GlitchDetectorText';
+
+type InputMode = 'image' | 'text';
 
 const GlitchDetector = () => {
+    const [inputMode, setInputMode] = useState<InputMode>('image');
+
+    // If text mode, render the text component with mode toggle
+    if (inputMode === 'text') {
+        return (
+            <div className="h-full flex flex-col">
+                {/* Input Mode Toggle */}
+                <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
+                    <span className="text-xs font-bold text-gray-500 uppercase">Input Type:</span>
+                    <div className="flex rounded-lg overflow-hidden border border-gray-300">
+                        <button
+                            onClick={() => setInputMode('image')}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors bg-white text-gray-600 hover:bg-gray-50"
+                        >
+                            <ImageIcon size={16} />
+                            Image
+                        </button>
+                        <button
+                            onClick={() => setInputMode('text')}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors bg-[var(--color-main)] text-white"
+                        >
+                            <Type size={16} />
+                            Text
+                        </button>
+                    </div>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                    <GlitchDetectorTextContent />
+                </div>
+            </div>
+        );
+    }
+
+    // Image mode - render the original image-based component
+    return <GlitchDetectorImage inputMode={inputMode} setInputMode={setInputMode} />;
+};
+
+const GlitchDetectorImage = ({ inputMode, setInputMode }: { inputMode: InputMode; setInputMode: (m: InputMode) => void }) => {
     const { dataset, activeItem, collections } = useSuiteStore();
 
     const [mode, setMode] = useState<'train' | 'test'>('train');
@@ -117,58 +158,82 @@ const GlitchDetector = () => {
     }, [selectedItem, threshold, exampleCount, isModelReady, mode]);
 
     const mainContent = (
-        <div className="h-full flex items-center justify-center p-6 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden relative">
-            {mode === 'train' ? (
-                <div className="text-center max-w-md">
-                    <div className="mb-6 flex justify-center">
-                        <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center animate-pulse">
-                            <Target className="w-10 h-10 text-main" />
-                        </div>
-                    </div>
-                    <h2 className="text-xl font-bold text-main mb-2">Training Mode</h2>
-                    <p className="text-text-muted mb-6">
-                        Select a "Normal" collection from the sidebar to establish a baseline.
-                        The model will learn the visual patterns of that entire collection.
-                    </p>
+        <div className="h-full flex flex-col">
+            {/* Input Mode Toggle */}
+            <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
+                <span className="text-xs font-bold text-gray-500 uppercase">Input Type:</span>
+                <div className="flex rounded-lg overflow-hidden border border-gray-300">
+                    <button
+                        onClick={() => setInputMode('image')}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors bg-[var(--color-main)] text-white"
+                    >
+                        <ImageIcon size={16} />
+                        Image
+                    </button>
+                    <button
+                        onClick={() => setInputMode('text')}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors bg-white text-gray-600 hover:bg-gray-50"
+                    >
+                        <Type size={16} />
+                        Text
+                    </button>
+                </div>
+            </div>
 
-                    {isProcessing && (
-                        <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
-                            <div
-                                className="bg-main h-full transition-all duration-300 transform origin-left"
-                                style={{ width: `${(progress.current / progress.total) * 100}%` }}
-                            ></div>
+            {/* Main Content */}
+            <div className="flex-1 flex items-center justify-center p-6 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden relative">
+                {mode === 'train' ? (
+                    <div className="text-center max-w-md">
+                        <div className="mb-6 flex justify-center">
+                            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center animate-pulse">
+                                <Target className="w-10 h-10 text-main" />
+                            </div>
                         </div>
-                    )}
-                    {isProcessing && (
-                        <p className="text-xs font-bold text-main mt-2">
-                            Learning pattern {progress.current} of {progress.total}...
+                        <h2 className="text-xl font-bold text-main mb-2">Training Mode</h2>
+                        <p className="text-text-muted mb-6">
+                            Select a "Normal" collection from the sidebar to establish a baseline.
+                            The model will learn the visual patterns of that entire collection.
                         </p>
-                    )}
-                </div>
-            ) : (
-                // TEST MODE
-                <div className={`relative w-full h-full flex items-center justify-center rounded-lg border-2 border-dashed transition-all ${isAnomaly ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
-                    {isAnomaly && (
-                        <div className="absolute top-4 bg-red-600 text-white px-6 py-2 rounded-full font-bold shadow-lg z-20 animate-fade-in flex items-center gap-2">
-                            <AlertTriangle className="w-5 h-5" />
-                            GLITCH DETECTED
-                        </div>
-                    )}
 
-                    {selectedItem && selectedItem.type === 'image' ? (
-                        <img
-                            src={selectedItem.content as string}
-                            alt="Analysis Target"
-                            className={`max-h-full max-w-full object-contain shadow-sm ${isAnomaly ? 'sepia contrast-125' : ''} transition-all duration-1000`}
-                        />
-                    ) : (
-                        <div className="text-center">
-                            <Activity className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                            <p className="text-text-muted">Select an image from the dashboard to test for anomalies.</p>
-                        </div>
-                    )}
-                </div>
-            )}
+                        {isProcessing && (
+                            <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
+                                <div
+                                    className="bg-main h-full transition-all duration-300 transform origin-left"
+                                    style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                                ></div>
+                            </div>
+                        )}
+                        {isProcessing && (
+                            <p className="text-xs font-bold text-main mt-2">
+                                Learning pattern {progress.current} of {progress.total}...
+                            </p>
+                        )}
+                    </div>
+                ) : (
+                    // TEST MODE
+                    <div className={`relative w-full h-full flex items-center justify-center rounded-lg border-2 border-dashed transition-all ${isAnomaly ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
+                        {isAnomaly && (
+                            <div className="absolute top-4 bg-red-600 text-white px-6 py-2 rounded-full font-bold shadow-lg z-20 animate-fade-in flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5" />
+                                GLITCH DETECTED
+                            </div>
+                        )}
+
+                        {selectedItem && selectedItem.type === 'image' ? (
+                            <img
+                                src={selectedItem.content as string}
+                                alt="Analysis Target"
+                                className={`max-h-full max-w-full object-contain shadow-sm ${isAnomaly ? 'sepia contrast-125' : ''} transition-all duration-1000`}
+                            />
+                        ) : (
+                            <div className="text-center">
+                                <Activity className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                                <p className="text-text-muted">Select an image from the dashboard to test for anomalies.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 

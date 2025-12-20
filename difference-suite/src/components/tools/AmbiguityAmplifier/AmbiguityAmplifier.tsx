@@ -2,15 +2,60 @@ import { useState, useEffect } from 'react';
 import { modelManager } from './components/ModelManager';
 import { useSuiteStore } from '../../../stores/suiteStore';
 import * as tf from '@tensorflow/tfjs';
-import { Zap, Info, AlertTriangle, Activity } from 'lucide-react';
+import { Zap, Info, AlertTriangle, Activity, Image as ImageIcon, Type } from 'lucide-react';
 import ToolLayout from '../../shared/ToolLayout';
+import AmbiguityAmplifierTextContent from '../AmbiguityAmplifierText/AmbiguityAmplifierText';
 
 interface Prediction {
     className: string;
     probability: number;
 }
 
+type AnalysisMode = 'image' | 'text';
+
 const AmbiguityAmplifier = () => {
+    const [mode, setMode] = useState<AnalysisMode>('image');
+
+    // If text mode, render the text component
+    if (mode === 'text') {
+        return (
+            <div className="h-full flex flex-col">
+                {/* Mode Toggle */}
+                <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
+                    <span className="text-xs font-bold text-gray-500 uppercase">Analysis Mode:</span>
+                    <div className="flex rounded-lg overflow-hidden border border-gray-300">
+                        <button
+                            onClick={() => setMode('image')}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors bg-white text-gray-600 hover:bg-gray-50"
+                        >
+                            <ImageIcon size={16} />
+                            Image
+                        </button>
+                        <button
+                            onClick={() => setMode('text')}
+                            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${mode === 'text'
+                                ? 'bg-[var(--color-main)] text-white'
+                                : 'bg-white text-gray-600 hover:bg-gray-50'
+                                }`}
+                        >
+                            <Type size={16} />
+                            Text
+                        </button>
+                    </div>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                    <AmbiguityAmplifierTextContent />
+                </div>
+            </div>
+        );
+    }
+
+    // Image mode - original implementation
+    return <AmbiguityAmplifierImage mode={mode} setMode={setMode} />;
+};
+
+// Renamed original component
+const AmbiguityAmplifierImage = ({ mode, setMode }: { mode: AnalysisMode; setMode: (m: AnalysisMode) => void }) => {
     const { dataset, activeItem, setActiveItem } = useSuiteStore();
     const imageItems = dataset.filter(i => i.type === 'image');
     const selectedItem = dataset.find(i => i.id === activeItem);
@@ -54,36 +99,66 @@ const AmbiguityAmplifier = () => {
     }, [selectedItem, noiseLevel, isModelReady]);
 
     const mainContent = (
-        <div className="h-full flex items-center justify-center bg-gray-50 border-2 border-dashed border-gray-100 rounded-lg overflow-hidden relative">
-            {selectedItem && selectedItem.type === 'image' ? (
-                <>
-                    <img
-                        src={selectedItem.content as string}
-                        alt="Analysis Target"
-                        className="max-h-full max-w-full object-contain shadow-lg"
-                        style={{ filter: `contrast(${100 - noiseLevel * 50}%) brightness(${100 + noiseLevel * 20}%)` }}
-                    />
-                    {isProcessing && (
-                        <div className="absolute top-4 right-4 bg-white/90 px-3 py-1 rounded-full text-xs font-bold text-main animate-pulse shadow-sm">
-                            Analyzing...
-                        </div>
-                    )}
-                </>
-            ) : (
-                <div className="text-center p-8">
-                    {selectedItem?.type !== 'image' && selectedItem ? (
-                        <>
-                            <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-orange-400" />
-                            <p className="text-text-muted">This tool requires an image input.</p>
-                        </>
-                    ) : (
-                        <>
-                            <Info className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                            <p className="text-text-muted">Select an image from the dashboard.</p>
-                        </>
-                    )}
+        <div className="h-full flex flex-col">
+            {/* Mode Toggle */}
+            <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
+                <span className="text-xs font-bold text-gray-500 uppercase">Analysis Mode:</span>
+                <div className="flex rounded-lg overflow-hidden border border-gray-300">
+                    <button
+                        onClick={() => setMode('image')}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${mode === 'image'
+                            ? 'bg-[var(--color-main)] text-white'
+                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        <ImageIcon size={16} />
+                        Image
+                    </button>
+                    <button
+                        onClick={() => setMode('text')}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${mode === 'text'
+                            ? 'bg-[var(--color-main)] text-white'
+                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        <Type size={16} />
+                        Text
+                    </button>
                 </div>
-            )}
+            </div>
+
+            {/* Image Display */}
+            <div className="flex-1 flex items-center justify-center bg-gray-50 border-2 border-dashed border-gray-100 rounded-lg overflow-hidden relative">
+                {selectedItem && selectedItem.type === 'image' ? (
+                    <>
+                        <img
+                            src={selectedItem.content as string}
+                            alt="Analysis Target"
+                            className="max-h-full max-w-full object-contain shadow-lg"
+                            style={{ filter: `contrast(${100 - noiseLevel * 50}%) brightness(${100 + noiseLevel * 20}%)` }}
+                        />
+                        {isProcessing && (
+                            <div className="absolute top-4 right-4 bg-white/90 px-3 py-1 rounded-full text-xs font-bold text-main animate-pulse shadow-sm">
+                                Analyzing...
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="text-center p-8">
+                        {selectedItem?.type !== 'image' && selectedItem ? (
+                            <>
+                                <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-orange-400" />
+                                <p className="text-text-muted">This tool requires an image input.</p>
+                            </>
+                        ) : (
+                            <>
+                                <Info className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                                <p className="text-text-muted">Select an image from the dashboard.</p>
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 

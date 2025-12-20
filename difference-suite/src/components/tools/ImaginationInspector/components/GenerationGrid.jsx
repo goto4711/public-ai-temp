@@ -33,10 +33,18 @@ const GenerationGrid = ({ results }) => {
                             )}
 
                             {/* Overlay Tags */}
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity p-2 text-xs text-white font-mono overflow-y-auto">
-                                {Object.entries(item.tags).map(([k, v]) => (
-                                    <div key={k}><span className="opacity-50">{k}:</span> {v}</div>
-                                ))}
+                            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity p-3 text-xs text-white overflow-y-auto flex flex-col gap-2">
+                                <div className="font-bold text-white/50 uppercase tracking-wider text-[10px] border-b border-white/10 pb-1">
+                                    Model Interpretation
+                                </div>
+                                <div className="italic text-white/90 leading-relaxed">
+                                    "{item.syntheticPrompt}"
+                                </div>
+                                <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] font-mono opacity-60">
+                                    {Object.entries(item.tags).map(([k, v]) => (
+                                        <div key={k}><span className="opacity-50">{k}:</span> {v}</div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                         <div className="text-xs font-mono text-center opacity-60">
