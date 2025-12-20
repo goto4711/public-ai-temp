@@ -40,7 +40,8 @@
 
   /* Cards / Panels */
   .deep-panel {
-    @apply bg-white border-2 border-main shadow-[4px_4px_0px_rgba(0, 0, 0, 0.1)];
+    @apply bg-white border-2 border-main;
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
   }
 
   /* Buttons */
@@ -49,7 +50,8 @@
   }
 
   .deep-button:hover {
-    @apply -translate-y-[2px] shadow-[2px_2px_0px_rgba(0, 0, 0, 0.1)];
+    @apply -translate-y-[2px];
+    box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
   }
 
   .deep-button:disabled {
@@ -61,12 +63,17 @@
   }
 
   .deep-button-secondary:hover {
-    @apply bg-main/5 -translate-y-[2px] shadow-[2px_2px_0px_rgba(0, 0, 0, 0.1)];
+    @apply bg-main/5 -translate-y-[2px];
+    box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
   }
 
   /* Input */
   .deep-input {
-    @apply w-full px-3 py-2 border-2 border-main bg-white text-main focus:outline-none focus:shadow-[2px_2px_0px_rgba(131, 33, 97, 0.2)];
+    @apply w-full px-3 py-2 border-2 border-main bg-white text-main focus:outline-none;
+  }
+
+  .deep-input:focus {
+    box-shadow: 2px 2px 0px rgba(131, 33, 97, 0.2);
   }
 
   /* Navigation Item */
