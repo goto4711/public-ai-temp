@@ -1,22 +1,72 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, RefreshCw, EyeOff, Info, Sliders, Brain } from 'lucide-react';
+import { Play, RefreshCw, EyeOff, Info, Sliders, Brain, Type, Image as ImageIcon, Sparkles } from 'lucide-react';
 import * as tf from '@tensorflow/tfjs';
 import { NoiseModel } from './components/NoiseModel';
+import { NoiseTextModel } from './components/NoiseTextModel';
 import { ResidualCanvas } from './components/ResidualCanvas';
+import { latentTextManager } from '../LatentSpaceNavigator/components/LatentTextModelManager';
 import { useSuiteStore } from '../../../stores/suiteStore';
 import ToolLayout from '../../shared/ToolLayout';
 
+type NavMode = 'image' | 'text';
+
+const SpectralHeatmap = ({ tensor }: { tensor: tf.Tensor2D }) => {
+    const data = tensor.dataSync();
+    // 512 dimensions = 16x32 grid
+    const rows = 16;
+    const cols = 32;
+
+    return (
+        <div
+            className="grid gap-px bg-gray-200 border border-gray-200"
+            style={{
+                gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                width: '100%',
+                maxWidth: '256px',
+                aspectRatio: '2/1'
+            }}
+        >
+            {Array.from(data).map((val, i) => {
+                // Normalize for visualization: higher difference = more intense color
+                // Vector values are small, so multiply to see something
+                const intensity = Math.min(val * 10, 1) * 255;
+                return (
+                    <div
+                        key={i}
+                        className="w-full h-full"
+                        title={`Dim ${i}: ${val.toFixed(4)}`}
+                        style={{
+                            backgroundColor: `rgb(${intensity}, ${intensity / 4}, ${255 - intensity})`
+                        }}
+                    />
+                );
+            })}
+        </div>
+    );
+};
+
 const NoisePredictor = () => {
     const { dataset, activeItem, setActiveItem } = useSuiteStore();
+    const [mode, setMode] = useState<NavMode>('image');
+
     const imageItems = dataset.filter(i => i.type === 'image');
+    const textItems = dataset.filter(i => i.type === 'text');
     const selectedItem = dataset.find(i => i.id === activeItem);
 
-    const [model] = useState(new NoiseModel());
-    const [image, setImage] = useState<string | null>(null);
-    const [tensor, setTensor] = useState<any>(null);
-    const [reconstructed, setReconstructed] = useState<any>(null);
-    const [residual, setResidual] = useState<any>(null);
+    const [imgModel] = useState(new NoiseModel());
+    const [textModel] = useState(new NoiseTextModel());
+
+    // Core Data State
+    const [content, setContent] = useState<string | null>(null);
+    const [inputTensor, setInputTensor] = useState<tf.Tensor | null>(null);
+    const [reconstructedTensor, setReconstructedTensor] = useState<tf.Tensor | null>(null);
+    const [residualTensor, setResidualTensor] = useState<tf.Tensor | null>(null);
+
+    // Logic/UI State
+    const [echoResult, setEchoResult] = useState<string | null>(null);
+    const [neighborResults, setNeighborResults] = useState<any[]>([]);
     const [isTraining, setIsTraining] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [loss, setLoss] = useState(0);
     const [epoch, setEpoch] = useState(0);
     const [latentDim, setLatentDim] = useState(32);
@@ -24,62 +74,82 @@ const NoisePredictor = () => {
     const imgRef = useRef<HTMLImageElement>(null);
 
     useEffect(() => {
-        if (selectedItem?.type === 'image') {
-            setImage(selectedItem.content as string);
-            setTensor(null);
-            setReconstructed(null);
-            setResidual(null);
+        if (selectedItem) {
+            setContent(selectedItem.content as string);
+            setInputTensor(null);
+            setReconstructedTensor(null);
+            setResidualTensor(null);
+            setEchoResult(null);
         }
     }, [selectedItem]);
 
     useEffect(() => {
-        const initTF = async () => {
+        const init = async () => {
             await tf.ready();
+            await latentTextManager.loadModel();
         };
-        initTF();
+        init();
     }, []);
 
-    const processImage = async () => {
-        if (!imgRef.current) return;
+    const processContent = async () => {
+        if (!content || isProcessing) return;
+        setIsProcessing(true);
 
         try {
-            const t = tf.tidy(() => {
-                const tensor = tf.browser.fromPixels(imgRef.current!)
-                    .resizeNearestNeighbor([256, 256])
-                    .toFloat()
-                    .div(255.0)
-                    .expandDims();
-                return tensor;
-            });
-
-            setTensor(t);
-            await model.createModel([256, 256, 3], latentDim);
+            if (mode === 'image' && imgRef.current) {
+                const t = tf.tidy(() => {
+                    return tf.browser.fromPixels(imgRef.current!)
+                        .resizeNearestNeighbor([256, 256])
+                        .toFloat()
+                        .div(255.0)
+                        .expandDims() as tf.Tensor4D;
+                });
+                setInputTensor(t);
+                await imgModel.createModel([256, 256, 3], latentDim);
+            } else if (mode === 'text') {
+                // Get embedding via shared manager
+                const emb = await latentTextManager.getEmbedding(content);
+                if (emb) {
+                    setInputTensor(emb);
+                    await textModel.createModel(512, latentDim);
+                }
+            }
         } catch (error) {
-            console.error('Error processing image:', error);
+            console.error('Error processing content:', error);
+        } finally {
+            setIsProcessing(false);
         }
     };
 
     const trainModel = async () => {
-        if (!tensor) return;
+        if (!inputTensor) return;
 
         setIsTraining(true);
         setLoss(0);
         setEpoch(0);
 
         try {
-            await model.train(tensor, 50, (e: number, l: number) => {
+            const activeModel = mode === 'image' ? imgModel : textModel;
+
+            await activeModel.train(inputTensor, 50, (e: number, l: number) => {
                 setEpoch(e + 1);
                 setLoss(l);
             });
 
-            const rec = model.predict(tensor);
+            const rec = activeModel.predict(inputTensor) as tf.Tensor;
             if (rec) {
-                setReconstructed(rec);
+                setReconstructedTensor(rec);
+                const res = activeModel.getResidual(inputTensor, rec);
+                setResidualTensor(res);
 
-                const res = tf.tidy(() => {
-                    return tf.sub(tensor, rec as tf.Tensor).abs();
-                });
-                setResidual(res);
+                if (mode === 'text') {
+                    // Find nearest word for echo
+                    const nearest = await latentTextManager.getNearest(rec as tf.Tensor2D);
+                    if (nearest && nearest.length > 0) {
+                        setEchoResult(nearest[0].word);
+                        setNeighborResults(nearest);
+                    }
+                }
             }
 
         } catch (error) {
@@ -93,58 +163,122 @@ const NoisePredictor = () => {
 
     const mainContent = (
         <div className="flex flex-col h-full bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-                <h2 className="text-lg font-bold text-main">Image Decomposition</h2>
-                <p className="text-xs text-text-muted">Original → Signal (Reconstructed) → Noise (Residual)</p>
+            {/* Mode Toggle */}
+            <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-tight">Analysis Mode:</span>
+                <div className="flex rounded-lg overflow-hidden border border-gray-300">
+                    <button
+                        onClick={() => setMode('image')}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all ${mode === 'image'
+                            ? 'bg-[var(--color-main)] text-white'
+                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        <ImageIcon size={16} />
+                        Visual
+                    </button>
+                    <button
+                        onClick={() => setMode('text')}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all ${mode === 'text'
+                            ? 'bg-[var(--color-main)] text-white'
+                            : 'bg-white text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        <Type size={16} />
+                        Semantic
+                    </button>
+                </div>
             </div>
 
-            <div className="flex-1 p-6 grid grid-cols-3 gap-4 min-h-0">
-                {/* Original */}
-                <div className="flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-                    <div className="px-3 py-2 border-b border-gray-100 bg-white">
-                        <h3 className="text-xs font-bold text-gray-600 uppercase">Original</h3>
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                <div>
+                    <h2 className="text-lg font-bold text-main">{mode === 'image' ? 'Image Decomposition' : 'Semantic Decomposition'}</h2>
+                    <p className="text-xs text-text-muted">
+                        {mode === 'image'
+                            ? 'Original → Signal (Reconstructed) → Noise (Residual)'
+                            : 'Original Text → Semantic Echo (Signal) → Spectral Distortion (Noise)'}
+                    </p>
+                </div>
+                {isProcessing && <span className="text-xs text-main animate-pulse font-bold uppercase">Processing...</span>}
+            </div>
+
+            <div className="flex-1 p-6 grid grid-cols-3 gap-6 min-h-0 overflow-y-auto">
+                {/* Original Content */}
+                <div className="flex flex-col bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                    <div className="px-4 py-3 border-b border-gray-100 bg-white flex items-center justify-between">
+                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Original</h3>
+                        <span className="px-2 py-0.5 bg-gray-100 rounded text-[9px] font-bold text-gray-500 uppercase">{mode}</span>
                     </div>
-                    <div className="flex-1 p-2 flex items-center justify-center">
-                        {image && (
-                            <img
-                                ref={imgRef}
-                                src={image}
-                                alt="Original"
-                                className="max-w-full max-h-full object-contain rounded border border-gray-300"
-                                crossOrigin="anonymous"
-                            />
+                    <div className="flex-1 p-4 flex items-center justify-center bg-white/50">
+                        {mode === 'image' ? (
+                            content ? (
+                                <img
+                                    ref={imgRef}
+                                    src={content}
+                                    alt="Original"
+                                    className="max-w-full max-h-full object-contain rounded-lg border border-gray-200 shadow-sm"
+                                    crossOrigin="anonymous"
+                                />
+                            ) : (
+                                <p className="text-xs italic text-gray-400">No image selected</p>
+                            )
+                        ) : (
+                            <div className="w-full h-full p-4 bg-white rounded-lg border border-gray-100 shadow-inner overflow-y-auto text-sm leading-relaxed text-gray-700 font-medium">
+                                {content || <p className="italic text-gray-300">No text item selected</p>}
+                            </div>
                         )}
                     </div>
                 </div>
 
-                {/* Reconstructed */}
-                <div className="flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-                    <div className="px-3 py-2 border-b border-gray-100 bg-white">
-                        <h3 className="text-xs font-bold text-gray-600 uppercase">Reconstructed (Signal)</h3>
+                {/* Reconstruction (Signal) */}
+                <div className="flex flex-col bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                    <div className="px-4 py-3 border-b border-gray-100 bg-white flex items-center justify-between">
+                        <h3 className="text-[10px] font-black text-main uppercase tracking-widest">{mode === 'image' ? 'Reconstructed' : 'Semantic Echo'}</h3>
+                        <Sparkles className="w-3 h-3 text-main opacity-40" />
                     </div>
-                    <div className="flex-1 p-2 flex items-center justify-center">
-                        {reconstructed ? (
-                            <ResidualCanvas tensor={reconstructed} width={256} height={256} />
+                    <div className="flex-1 p-4 flex items-center justify-center bg-white/50 transition-all">
+                        {reconstructedTensor ? (
+                            mode === 'image' ? (
+                                <ResidualCanvas tensor={reconstructedTensor} width={256} height={256} />
+                            ) : (
+                                <div className="text-center p-6 animate-in zoom-in duration-500">
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Reconstructed Meaning</div>
+                                    <h4 className="text-3xl font-black text-main tracking-tighter mb-2">{echoResult || "..."}</h4>
+                                    <div className="flex flex-wrap gap-2 justify-center mt-4">
+                                        {neighborResults.slice(1, 4).map((r, i) => (
+                                            <span key={i} className="px-2 py-1 bg-gray-100 rounded text-[10px] text-gray-500 font-bold uppercase">
+                                                {r.word}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs italic">
-                                Train model first
+                            <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs italic">
+                                {inputTensor ? "Model ready for training" : "Process content first"}
                             </div>
                         )}
                     </div>
                 </div>
 
                 {/* Residual (Noise) */}
-                <div className="flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-                    <div className="px-3 py-2 border-b border-gray-100 bg-white flex items-center gap-1">
-                        <EyeOff className="w-3 h-3 text-gray-500" />
-                        <h3 className="text-xs font-bold text-gray-600 uppercase">Residual (Noise)</h3>
+                <div className="flex flex-col bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                    <div className="px-4 py-3 border-b border-gray-100 bg-white flex items-center justify-between">
+                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{mode === 'image' ? 'Residual Noise' : 'Spectral Distortion'}</h3>
+                        <EyeOff className="w-3 h-3 text-gray-400" />
                     </div>
-                    <div className="flex-1 p-2 flex items-center justify-center">
-                        {residual ? (
-                            <ResidualCanvas tensor={residual} width={256} height={256} />
+                    <div className="flex-1 p-4 flex items-center justify-center bg-white/50 overflow-hidden">
+                        {residualTensor ? (
+                            mode === 'image' ? (
+                                <ResidualCanvas tensor={residualTensor} width={256} height={256} />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <SpectralHeatmap tensor={residualTensor as tf.Tensor2D} />
+                                </div>
+                            )
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs italic">
-                                Train model first
+                            <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs italic">
+                                {inputTensor ? "Model ready for training" : "Process content first"}
                             </div>
                         )}
                     </div>
@@ -155,15 +289,15 @@ const NoisePredictor = () => {
 
     const sideContent = (
         <div className="flex flex-col h-full gap-4 p-1">
-            <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                <label className="text-xs font-bold text-text-muted block mb-2">Select Target Image:</label>
+            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">Select Target {mode === 'image' ? 'Image' : 'Text'}:</label>
                 <select
-                    className="deep-input w-full text-xs"
+                    className="deep-input w-full text-xs font-bold"
                     value={activeItem || ''}
                     onChange={(e) => setActiveItem(e.target.value)}
                 >
-                    <option value="" disabled>-- Choose Image --</option>
-                    {imageItems.map(item => (
+                    <option value="" disabled>-- Choose {mode === 'image' ? 'Image' : 'Text'} --</option>
+                    {(mode === 'image' ? imageItems : textItems).map(item => (
                         <option key={item.id} value={item.id}>{item.name}</option>
                     ))}
                 </select>
@@ -194,19 +328,19 @@ const NoisePredictor = () => {
                     <p className="text-xs text-gray-400 mt-1">Lower = more compression = more noise visible</p>
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 pt-2">
                     <button
-                        onClick={processImage}
+                        onClick={processContent}
                         className="deep-button w-full justify-center text-sm"
-                        disabled={isTraining || !image}
+                        disabled={isTraining || isProcessing || !content}
                     >
                         <Play className="w-4 h-4" />
-                        Process Image
+                        Prepare Data
                     </button>
                     <button
                         onClick={trainModel}
                         className="deep-button w-full justify-center text-sm"
-                        disabled={isTraining || !tensor}
+                        disabled={isTraining || !inputTensor}
                     >
                         <RefreshCw className="w-4 h-4" />
                         Train Autoencoder
@@ -232,14 +366,30 @@ const NoisePredictor = () => {
             )}
 
             {/* Instructions */}
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-xs text-gray-500 space-y-2 flex-1">
-                <p className="font-bold text-gray-600">How it works:</p>
-                <ol className="list-decimal list-inside space-y-1 opacity-80">
-                    <li>Process the image to prepare it</li>
-                    <li>Train an autoencoder to compress & reconstruct</li>
-                    <li>View "Residual" — what the model couldn't learn</li>
-                </ol>
-                <div className="mt-3 pt-3 border-t border-gray-200 opacity-60 italic">
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 text-[11px] text-gray-500 space-y-4 flex-1 overflow-y-auto shadow-inner">
+                <div className="space-y-2">
+                    <p className="font-black text-gray-700 uppercase tracking-widest text-[10px]">How it works:</p>
+                    <ol className="list-decimal list-inside space-y-1 opacity-80 leading-relaxed">
+                        <li>Prepare the {mode} data</li>
+                        <li>Train a {mode === 'image' ? 'Convolutional' : 'Dense'} Autoencoder</li>
+                        <li>Analyze the {mode === 'image' ? 'Residual' : 'Distortion'}</li>
+                    </ol>
+                </div>
+
+                {mode === 'text' && (
+                    <div className="space-y-3 pt-3 border-t border-gray-200">
+                        <div>
+                            <p className="font-bold text-main uppercase text-[9px] mb-1">Semantic Echo (The "Gist")</p>
+                            <p className="leading-tight opacity-90">The main point the model extracted. <br /><span className="italic opacity-60">e.g. A long sentence about "voting for school policies" might simplify to <b>"EDUCATION"</b>.</span></p>
+                        </div>
+                        <div>
+                            <p className="font-bold text-gray-600 uppercase text-[9px] mb-1">Spectral Distortion (The "Nuance")</p>
+                            <p className="leading-tight opacity-90">The subtle details left behind. <br /><span className="italic opacity-60">The model captured the core idea but "forgot" the specific tone or unique words you used.</span></p>
+                        </div>
+                    </div>
+                )}
+
+                <div className="pt-3 border-t border-gray-200 opacity-60 italic leading-snug">
                     "The noise is not random; it is the detail the algorithm chose to ignore."
                 </div>
             </div>

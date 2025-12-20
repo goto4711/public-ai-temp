@@ -1,13 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { vectorManager } from './components/VectorManager';
 import VectorHeatmap from './components/VectorHeatmap';
 import { useSuiteStore } from '../../../stores/suiteStore';
-import { Info, Cpu } from 'lucide-react';
+import { Info, Cpu, Image as ImageIcon, Type } from 'lucide-react';
 import ToolLayout from '../../shared/ToolLayout';
+
+type AnalysisMode = 'image' | 'text';
 
 const DeepVectorMirror = () => {
     const { dataset, activeItem, setActiveItem } = useSuiteStore();
-    const imageItems = dataset.filter(i => i.type === 'image');
+    const [mode, setMode] = useState<AnalysisMode>('image');
+
+    const imageItems = useMemo(() => dataset.filter(i => i.type === 'image'), [dataset]);
+    const textItems = useMemo(() => dataset.filter(i => i.type === 'text'), [dataset]);
+
+    // When mode changes, optionally clear selection or try to find a match
+    useEffect(() => {
+        const item = dataset.find(i => i.id === activeItem);
+        if (item && item.type !== mode) {
+            // If the current active item doesn't match the mode, we don't force clear
+            // but the UI will handle it gracefully.
+        }
+    }, [mode]);
+
     const selectedItem = dataset.find(i => i.id === activeItem);
 
     const [vector, setVector] = useState<number[]>([]);
@@ -24,6 +39,9 @@ const DeepVectorMirror = () => {
     // Process item when selected or params change
     useEffect(() => {
         if (!selectedItem) return;
+
+        // Safety check - ONLY process if item type matches mode
+        if (selectedItem.type !== mode) return;
 
         const processItem = async () => {
             setIsProcessing(true);
@@ -52,135 +70,174 @@ const DeepVectorMirror = () => {
         };
 
         processItem();
-    }, [selectedItem, noiseLevel, contextLevel]);
+    }, [selectedItem, noiseLevel, contextLevel, mode]);
 
     const mainContent = (
-        <div className="h-full flex flex-col p-6">
-            {selectedItem ? (
-                <div className="flex-1 flex gap-6 min-h-0">
-                    {/* Left: Reality (Input) */}
-                    <div className="flex-1 flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-                        <div className="px-4 py-2 border-b border-gray-200 bg-white flex justify-between items-center">
-                            <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Input (Reality)</span>
+        <div className="h-full flex flex-col">
+            {/* Mode Toggle Bar */}
+            <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
+                <span className="text-xs font-bold text-gray-500 uppercase">Input Mode:</span>
+                <div className="flex rounded-lg overflow-hidden border border-gray-300">
+                    <button
+                        onClick={() => setMode('image')}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${mode === 'image'
+                                ? 'bg-[var(--color-main)] text-white'
+                                : 'bg-white text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        <ImageIcon size={16} />
+                        Image
+                    </button>
+                    <button
+                        onClick={() => setMode('text')}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${mode === 'text'
+                                ? 'bg-[var(--color-main)] text-white'
+                                : 'bg-white text-gray-600 hover:bg-gray-50'
+                            }`}
+                    >
+                        <Type size={16} />
+                        Text
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex-1 flex flex-col p-6 min-h-0">
+                {selectedItem && selectedItem.type === mode ? (
+                    <div className="flex-1 flex gap-6 min-h-0">
+                        {/* Left: Reality (Input) */}
+                        <div className="flex-1 flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                            <div className="px-4 py-2 border-b border-gray-200 bg-white flex justify-between items-center">
+                                <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Input (Reality)</span>
+                            </div>
+                            <div className="flex-1 p-4 flex items-center justify-center overflow-hidden relative">
+                                {selectedItem.type === 'image' ? (
+                                    <img
+                                        src={selectedItem.content as string}
+                                        alt="Target"
+                                        className="max-w-full max-h-full object-contain shadow-sm"
+                                    />
+                                ) : (
+                                    <div className="prose prose-sm max-w-none p-4 w-full h-full overflow-y-auto bg-white border border-gray-100 rounded text-xs font-mono whitespace-pre-wrap">
+                                        {selectedItem.content as string}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex-1 p-4 flex items-center justify-center overflow-hidden relative">
-                            {selectedItem.type === 'image' ? (
-                                <img
-                                    src={selectedItem.content as string}
-                                    alt="Target"
-                                    className="max-w-full max-h-full object-contain shadow-sm"
-                                />
-                            ) : (
-                                <div className="prose prose-sm max-w-none p-4 w-full h-full overflow-y-auto bg-white border border-gray-100 rounded text-xs font-mono whitespace-pre-wrap">
-                                    {selectedItem.content as string}
-                                </div>
-                            )}
+
+                        {/* Right: Representation (Vector) */}
+                        <div className="flex-1 flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden relative">
+                            <div className="px-4 py-2 border-b border-gray-200 bg-white flex justify-between items-center">
+                                <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Vector (Representation)</span>
+                                {isProcessing && <span className="text-xs text-main animate-pulse">Processing...</span>}
+                            </div>
+                            <div className="flex-1 p-4 flex items-center justify-center overflow-hidden">
+                                {vector.length > 0 ? (
+                                    <div className="border border-gray-200 shadow-sm bg-white p-1">
+                                        {/* @ts-ignore */}
+                                        <VectorHeatmap vector={vector} width={400} height={400} />
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-text-muted text-xs">
+                                        {isProcessing ? 'Calculating...' : 'Waiting for vector...'}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
-
-                    {/* Right: Representation (Vector) */}
-                    <div className="flex-1 flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden relative">
-                        <div className="px-4 py-2 border-b border-gray-200 bg-white flex justify-between items-center">
-                            <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Vector (Representation)</span>
-                            {isProcessing && <span className="text-xs text-main animate-pulse">Processing...</span>}
-                        </div>
-                        <div className="flex-1 p-4 flex items-center justify-center overflow-hidden">
-                            {vector.length > 0 ? (
-                                <div className="border border-gray-200 shadow-sm bg-white p-1">
-                                    {/* @ts-ignore */}
-                                    <VectorHeatmap vector={vector} width={400} height={400} />
-                                </div>
-                            ) : (
-                                <div className="text-center text-text-muted text-xs">
-                                    {isProcessing ? 'Calculating...' : 'Waiting for vector...'}
-                                </div>
-                            )}
-                        </div>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center">
+                        <Info className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                        <p className="text-text-muted max-w-sm">
+                            Select a {mode === 'image' ? 'photo' : 'text snippet'} from the dashboard to see its mathematical reflection.
+                        </p>
                     </div>
-                </div>
-            ) : (
-                <div className="h-full flex flex-col items-center justify-center text-center">
-                    <Info className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p className="text-text-muted">Select an item from the dashboard to begin analysis.</p>
-                </div>
-            )}
+                )}
 
-            {/* Footer / Description */}
-            {selectedItem && (
-                <div className="mt-4 text-center">
-                    <p className="text-xs text-text-muted max-w-2xl mx-auto">
-                        <strong>Left:</strong> The raw input as perceived by humans. <strong>Right:</strong> The internal mathematical representation (embedding) used by the AI. Note how the "Context Shift" alters the representation even if the input image stays the same.
-                    </p>
-                </div>
-            )}
+                {/* Footer / Description */}
+                {selectedItem && selectedItem.type === mode && (
+                    <div className="mt-4 text-center">
+                        <p className="text-xs text-text-muted max-w-2xl mx-auto">
+                            <strong>Left:</strong> The raw input as perceived by humans. <strong>Right:</strong> The internal mathematical representation (embedding) used by the AI. Note how the "Context Shift" alters the representation even if the input stays the same.
+                        </p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 
     const sideContent = (
         <div className="flex flex-col gap-6 p-1">
             <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm mb-2">
-                <label className="text-xs font-bold text-text-muted block mb-2">Select Target Image:</label>
+                <label className="text-xs font-bold text-text-muted block mb-2 uppercase tracking-tight">
+                    Select {mode === 'image' ? 'Image' : 'Text'} Target:
+                </label>
                 <select
                     className="deep-input w-full text-xs"
                     value={activeItem || ''}
                     onChange={(e) => setActiveItem(e.target.value)}
                 >
-                    <option value="" disabled>-- Choose Image --</option>
-                    {imageItems.map(item => (
+                    <option value="" disabled>-- Choose {mode === 'image' ? 'Image' : 'Text'} --</option>
+                    {(mode === 'image' ? imageItems : textItems).map(item => (
                         <option key={item.id} value={item.id}>{item.name}</option>
                     ))}
                 </select>
+                {(mode === 'image' ? imageItems : textItems).length === 0 && (
+                    <p className="text-[10px] text-orange-600 mt-2 italic">
+                        No {mode}s found in your dataset. Upload some via the dashboard.
+                    </p>
+                )}
             </div>
 
             {/* Controls */}
             <div>
-                <label className="text-sm font-bold block mb-2">Noise Injection</label>
-                <input
-                    type="range" min="0" max="1" step="0.01"
-                    value={noiseLevel}
-                    onChange={e => setNoiseLevel(parseFloat(e.target.value))}
-                    className="dc-slider"
-                />
-                <div className="flex justify-between mt-1 text-xs text-text-muted">
-                    <span>Stable</span>
-                    <span>{noiseLevel.toFixed(2)}</span>
-                    <span>Chaotic</span>
-                </div>
-                <p className="text-xs text-text-muted mt-2 leading-relaxed opacity-80">
-                    Randomly perturbs vector values to simulate signal degradation or input corruption. Tests how "robust" the AI's understanding is.
-                </p>
-            </div>
+                <label className="text-sm font-bold block mb-2 flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-main" />
+                    Injection Parameters
+                </label>
 
-            <div>
-                <label className="text-sm font-bold block mb-2">Context Shift</label>
-                <input
-                    type="range" min="0" max="1" step="0.01"
-                    value={contextLevel}
-                    onChange={e => setContextLevel(parseFloat(e.target.value))}
-                    className="dc-slider"
-                />
-                <div className="flex justify-between mt-1 text-xs text-text-muted">
-                    <span>Neutral</span>
-                    <span>{contextLevel.toFixed(2)}</span>
-                    <span>Biased</span>
+                <div className="space-y-4">
+                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div className="flex justify-between mb-1">
+                            <label className="text-[10px] font-bold text-text-muted uppercase">Noise Level</label>
+                            <span className="text-[10px] font-bold text-main">{(noiseLevel * 100).toFixed(0)}%</span>
+                        </div>
+                        <input
+                            type="range" min="0" max="1" step="0.01"
+                            value={noiseLevel}
+                            onChange={e => setNoiseLevel(parseFloat(e.target.value))}
+                            className="dc-slider"
+                        />
+                        <p className="text-[9px] text-text-muted mt-1 opacity-70">Simulates input corruption.</p>
+                    </div>
+
+                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div className="flex justify-between mb-1">
+                            <label className="text-[10px] font-bold text-text-muted uppercase">Context Shift</label>
+                            <span className="text-[10px] font-bold text-secondary">{(contextLevel * 100).toFixed(0)}%</span>
+                        </div>
+                        <input
+                            type="range" min="0" max="1" step="0.01"
+                            value={contextLevel}
+                            onChange={e => setContextLevel(parseFloat(e.target.value))}
+                            className="dc-slider"
+                        />
+                        <p className="text-[9px] text-text-muted mt-1 opacity-70">Simulates semantic bias.</p>
+                    </div>
                 </div>
-                <p className="text-xs text-text-muted mt-2 leading-relaxed opacity-80">
-                    Systematically alters the vector space (sine wave addition). Simulates changing the semantic context or background. Tests if the meaning holds.
-                </p>
             </div>
 
             <div className="mt-4 pt-4 border-t border-gray-100">
                 <div className="flex items-center gap-2 mb-2">
-                    <Cpu className="w-4 h-4 text-main" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-main"></div>
                     <span className="text-sm font-bold">Vector Stats</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-gray-50 p-2 rounded">
-                        <span className="block text-text-muted">Dimensions</span>
+                    <div className="bg-white p-2 rounded border border-gray-100">
+                        <span className="block text-[10px] text-text-muted uppercase">Dimensions</span>
                         <span className="font-bold">{vector.length || '-'}</span>
                     </div>
-                    <div className="bg-gray-50 p-2 rounded">
-                        <span className="block text-text-muted">Sparsity</span>
+                    <div className="bg-white p-2 rounded border border-gray-100">
+                        <span className="block text-[10px] text-text-muted uppercase">Sparsity</span>
                         <span className="font-bold">
                             {vector.length > 0 ? (vector.filter(v => Math.abs(v) < 0.01).length / vector.length * 100).toFixed(0) : '-'}%
                         </span>
@@ -191,20 +248,20 @@ const DeepVectorMirror = () => {
             {/* Legend */}
             <div className="mt-4 pt-4 border-t border-gray-100">
                 <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-bold">Visualization Legend</span>
+                    <span className="text-sm font-bold uppercase tracking-tighter text-text-muted opacity-50">Legend</span>
                 </div>
-                <div className="grid grid-cols-1 gap-2 text-xs">
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
-                        <span className="text-text-muted">High Positive Activation (Red)</span>
+                <div className="grid grid-cols-1 gap-1.5 text-[10px]">
+                    <div className="flex items-center gap-2 px-2 py-1 bg-red-50 text-red-700 rounded border border-red-100">
+                        <div className="w-2 h-2 bg-red-500 rounded-full shadow-sm"></div>
+                        <span>Positive Activation</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-black rounded-sm border border-gray-600"></div>
-                        <span className="text-text-muted">Neutral / Near Zero (Black)</span>
+                    <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 text-gray-700 rounded border border-gray-200">
+                        <div className="w-2 h-2 bg-black rounded-full shadow-sm"></div>
+                        <span>Neutral / Zero</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
-                        <span className="text-text-muted">High Negative Activation (Blue)</span>
+                    <div className="flex items-center gap-2 px-2 py-1 bg-blue-50 text-blue-700 rounded border border-blue-100">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>
+                        <span>Negative Activation</span>
                     </div>
                 </div>
             </div>
@@ -214,7 +271,7 @@ const DeepVectorMirror = () => {
     return (
         <ToolLayout
             title="Deep Vector Mirror"
-            subtitle="Explore the stability of AI representations"
+            subtitle="Explore the mathematical reflection of meaning"
             mainContent={mainContent}
             sideContent={sideContent}
         />
