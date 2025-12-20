@@ -1,6 +1,6 @@
 @import "tailwindcss";
-@config "../tailwind.config.js";
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600&display=swap');
+@config "../tailwind.config.js";
 
 /* Deep Culture Design System */
 :root {
@@ -10,7 +10,7 @@
   --color-alt: #ADFC92;
   --color-background: #99B2DD;
   --font-main: 'Lexend', sans-serif;
-  
+
   /* Legacy/Tailwind mapping */
   --color-border: var(--color-main);
   --color-surface: #ffffff;
@@ -25,27 +25,33 @@
     @apply antialiased h-screen overflow-hidden;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-semibold tracking-tight uppercase text-main;
     font-family: var(--font-main);
   }
 }
 
 @layer components {
+
   /* Cards / Panels */
   .deep-panel {
-    @apply bg-white border-2 border-main shadow-[4px_4px_0px_rgba(0,0,0,0.1)];
+    @apply bg-white border-2 border-main shadow-[4px_4px_0px_rgba(0, 0, 0, 0.1)];
   }
 
   /* Buttons */
   .deep-button {
     @apply px-4 py-2 font-semibold uppercase bg-alt border-2 border-main text-main cursor-pointer transition-transform duration-200 select-none;
   }
-  
+
   .deep-button:hover {
-    @apply -translate-y-[2px] shadow-[2px_2px_0px_rgba(0,0,0,0.1)];
+    @apply -translate-y-[2px] shadow-[2px_2px_0px_rgba(0, 0, 0, 0.1)];
   }
-  
+
   .deep-button:disabled {
     @apply opacity-50 cursor-not-allowed transform-none shadow-none;
   }
@@ -55,19 +61,19 @@
   }
 
   .deep-button-secondary:hover {
-    @apply bg-main/5 -translate-y-[2px] shadow-[2px_2px_0px_rgba(0,0,0,0.1)];
+    @apply bg-main/5 -translate-y-[2px] shadow-[2px_2px_0px_rgba(0, 0, 0, 0.1)];
   }
 
   /* Input */
   .deep-input {
-    @apply w-full px-3 py-2 border-2 border-main bg-white text-main focus:outline-none focus:shadow-[2px_2px_0px_rgba(131,33,97,0.2)];
+    @apply w-full px-3 py-2 border-2 border-main bg-white text-main focus:outline-none focus:shadow-[2px_2px_0px_rgba(131, 33, 97, 0.2)];
   }
 
   /* Navigation Item */
   .nav-item {
     @apply flex items-center gap-2 px-4 py-2 text-main/80 hover:text-main hover:bg-white/40 transition-colors cursor-pointer font-medium;
   }
-  
+
   .nav-item.active {
     @apply bg-white text-main font-bold border-r-4 border-main;
   }
