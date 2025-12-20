@@ -81,8 +81,8 @@ const DeepVectorMirror = () => {
                     <button
                         onClick={() => setMode('image')}
                         className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${mode === 'image'
-                                ? 'bg-[var(--color-main)] text-white'
-                                : 'bg-white text-gray-600 hover:bg-gray-50'
+                            ? 'bg-[var(--color-main)] text-white'
+                            : 'bg-white text-gray-600 hover:bg-gray-50'
                             }`}
                     >
                         <ImageIcon size={16} />
@@ -91,8 +91,8 @@ const DeepVectorMirror = () => {
                     <button
                         onClick={() => setMode('text')}
                         className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${mode === 'text'
-                                ? 'bg-[var(--color-main)] text-white'
-                                : 'bg-white text-gray-600 hover:bg-gray-50'
+                            ? 'bg-[var(--color-main)] text-white'
+                            : 'bg-white text-gray-600 hover:bg-gray-50'
                             }`}
                     >
                         <Type size={16} />
@@ -239,7 +239,13 @@ const DeepVectorMirror = () => {
                     <div className="bg-white p-2 rounded border border-gray-100">
                         <span className="block text-[10px] text-text-muted uppercase">Sparsity</span>
                         <span className="font-bold">
-                            {vector.length > 0 ? (vector.filter(v => Math.abs(v) < 0.01).length / vector.length * 100).toFixed(0) : '-'}%
+                            {vector.length > 0 ? (
+                                (() => {
+                                    const maxVal = Math.max(...vector.map(Math.abs));
+                                    const threshold = mode === 'text' ? maxVal * 0.1 : 0.01;
+                                    return (vector.filter(v => Math.abs(v) < threshold).length / vector.length * 100).toFixed(0);
+                                })()
+                            ) : '-'}%
                         </span>
                     </div>
                 </div>

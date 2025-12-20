@@ -17,15 +17,14 @@ const VectorHeatmap = ({ vector, width = 300, height = 300 }) => {
 
         ctx.clearRect(0, 0, width, height);
 
+        // Calculate max magnitude for scaling to ensure visibility
+        const maxVal = Math.max(...vector.map(Math.abs), 0.0001);
+
         for (let i = 0; i < numValues; i++) {
             const val = vector[i];
-            // Normalize roughly -1 to 1 or 0 to 1 depending on model
-            // MobileNet/USE usually output values roughly in -1 to 1 range or similar distribution
-            // We'll map them to colors. 
-            // Negative = Blue, Positive = Red, Near Zero = Black/White
 
-            // Simple normalization for visualization
-            const normalized = Math.max(-1, Math.min(1, val));
+            // Map to [-1, 1] range based on local max to reveal small activations
+            const normalized = val / maxVal;
 
             let r = 0, g = 0, b = 0;
             if (normalized > 0) {
