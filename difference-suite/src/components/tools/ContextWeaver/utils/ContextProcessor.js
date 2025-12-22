@@ -1,14 +1,4 @@
-import * as tf from '@tensorflow/tfjs';
-import * as use from '@tensorflow-models/universal-sentence-encoder';
-
-let model = null;
-
-export const loadModel = async () => {
-    if (!model) {
-        model = await use.load();
-    }
-    return model;
-};
+import { transformersManager } from '../../../../utils/TransformersManager';
 
 // Compute cosine similarity between two vectors
 const cosineSimilarity = (a, b) => {
@@ -19,21 +9,15 @@ const cosineSimilarity = (a, b) => {
 };
 
 export const processContexts = async (queryText, contexts) => {
-    if (!model) await loadModel();
-
-    // Embed the query
-    const queryEmbeddingTensor = await model.embed([queryText]);
-    const queryEmbedding = (await queryEmbeddingTensor.array())[0];
-    queryEmbeddingTensor.dispose();
+    // Embed the query using Transformers.js
+    const queryEmbedding = await transformersManager.getEmbeddings(queryText);
 
     // Process each context
     const results = [];
 
     for (const context of contexts) {
-        // Embed all items in this context
-        const contextEmbeddingsTensor = await model.embed(context.items);
-        const contextEmbeddings = await contextEmbeddingsTensor.array();
-        contextEmbeddingsTensor.dispose();
+        // Embed all items in this context using batch processing
+        const contextEmbeddings = await transformersManager.getEmbeddingsBatch(context.items);
 
         // Compute similarities
         const similarities = contextEmbeddings.map((embedding, i) => ({
@@ -58,7 +42,6 @@ export const processContexts = async (queryText, contexts) => {
 };
 
 export const extractSemanticKeywords = async (fullText, count = 30) => {
-    if (!model) await loadModel();
     if (!fullText || !fullText.trim()) return [];
 
     // 1. Tokenize and clean
@@ -75,16 +58,11 @@ export const extractSemanticKeywords = async (fullText, count = 30) => {
     const candidates = words.slice(0, 500);
 
     // 2. Embed the full text to get the "Topic Vector"
-    // Using a chunk of the text to represent the overall context
     const contextStr = fullText.slice(0, 5000);
-    const textEmbeddingTensor = await model.embed([contextStr]);
-    const textVector = (await textEmbeddingTensor.array())[0];
-    textEmbeddingTensor.dispose();
+    const textVector = await transformersManager.getEmbeddings(contextStr);
 
-    // 3. Embed all candidate words simultaneously
-    const candidateEmbeddingsTensor = await model.embed(candidates);
-    const candidateVectors = await candidateEmbeddingsTensor.array();
-    candidateEmbeddingsTensor.dispose();
+    // 3. Embed all candidate words simultaneously using batching
+    const candidateVectors = await transformersManager.getEmbeddingsBatch(candidates);
 
     // 4. Calculate similarity of each word to the topic vector
     const scoredWords = candidates.map((word, i) => ({

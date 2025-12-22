@@ -1,43 +1,56 @@
-import * as use from '@tensorflow-models/universal-sentence-encoder';
+import { transformersManager } from '../../../../utils/TransformersManager';
 import * as knnClassifier from '@tensorflow-models/knn-classifier';
 
 class GlitchTextModelManager {
     constructor() {
-        this.model = null;
         this.classifier = null;
+        this.isReady = false;
     }
 
     async loadModel() {
-        if (this.model) return; // Already loaded
-        this.model = await use.load();
+        if (this.isReady) return;
         this.classifier = knnClassifier.create();
-        console.log("USE and KNN loaded for Glitch Detector Text");
 
-        // Seed with anomaly examples (gibberish) so KNN has 2 classes
-        await this.classifier.addExample(await this.model.embed(['sdfsdf sdfsdf sdfsdf']), 'anomaly');
-        await this.classifier.addExample(await this.model.embed(['1234 5678 9012']), 'anomaly');
-        await this.classifier.addExample(await this.model.embed(['!@#$% ^&*()']), 'anomaly');
+        // Seed with anomaly examples (gibberish)
+        const anomalies = [
+            'sdfsdf sdfsdf sdfsdf',
+            '1234 5678 9012',
+            '!@#$% ^&*()'
+        ];
+
+        for (const text of anomalies) {
+            const emb = await transformersManager.getEmbeddings(text);
+            const tensor = tf.tensor2d([emb]);
+            this.classifier.addExample(tensor, 'anomaly');
+            tensor.dispose();
+        }
+
+        this.isReady = true;
+        console.log("Glitch Detector Text Model initialized with Transformers.js backend");
     }
 
     async addExample(text) {
-        console.log('[GlitchTextModelManager] addExample called:', { text: text?.substring(0, 50), modelReady: !!this.model, classifierReady: !!this.classifier });
-        if (!this.model || !this.classifier) {
-            console.warn('[GlitchTextModelManager] Model not ready, skipping addExample');
-            return;
+        console.log('[GlitchTextModelManager] addExample (Transformers.js):', { text: text?.substring(0, 50) });
+        if (!this.isReady || !this.classifier) {
+            await this.loadModel();
         }
-        const embeddings = await this.model.embed([text]);
-        this.classifier.addExample(embeddings, 'normal');
+
+        const emb = await transformersManager.getEmbeddings(text);
+        const tensor = tf.tensor2d([emb]);
+        this.classifier.addExample(tensor, 'normal');
         console.log('[GlitchTextModelManager] Example added. Current count:', this.getExampleCount());
-        embeddings.dispose();
+        tensor.dispose();
     }
 
     async predict(text) {
-        if (!this.model || !this.classifier) return 0;
+        if (!this.isReady || !this.classifier) return 0;
         if (this.classifier.getNumClasses() === 0) return 0;
 
-        const embeddings = await this.model.embed([text]);
-        const result = await this.classifier.predictClass(embeddings);
-        embeddings.dispose();
+        const emb = await transformersManager.getEmbeddings(text);
+        const tensor = tf.tensor2d([emb]);
+        const result = await this.classifier.predictClass(tensor);
+        tensor.dispose();
+
         return result.confidences['normal'] || 0;
     }
 

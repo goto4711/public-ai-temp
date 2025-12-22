@@ -3,7 +3,7 @@ import { Search, Info, FileText } from 'lucide-react';
 import RadialViz from './components/RadialViz';
 import ComparisonTable from './components/ComparisonTable';
 import VectorInspector from './components/VectorInspector';
-import { loadModel, processContexts, extractSemanticKeywords } from './utils/ContextProcessor';
+import { processContexts, extractSemanticKeywords } from './utils/ContextProcessor';
 import { useSuiteStore } from '../../../stores/suiteStore';
 import ToolLayout from '../../shared/ToolLayout';
 
@@ -93,7 +93,6 @@ const ContextWeaver = () => {
         setSelectedMatch(null);
 
         try {
-            await loadModel();
             setStatus("Analyzing contexts...");
             const analysisResults = await processContexts(query, contexts);
             setResults(analysisResults);

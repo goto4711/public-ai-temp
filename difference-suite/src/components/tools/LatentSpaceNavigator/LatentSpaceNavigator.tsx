@@ -3,7 +3,7 @@ import { modelManager } from '../AmbiguityAmplifier/components/ModelManager';
 import { latentTextManager } from './components/LatentTextModelManager';
 import { useSuiteStore } from '../../../stores/suiteStore';
 import * as tf from '@tensorflow/tfjs';
-import { Info, Layers, Sparkles, Image as ImageIcon, Type, ArrowRight, BrainCircuit, Wand2 } from 'lucide-react';
+import { Info, Layers, Sparkles, Image as ImageIcon, Type, ArrowRight, BrainCircuit, Wand2, RefreshCw } from 'lucide-react';
 import ToolLayout from '../../shared/ToolLayout';
 import { extractSemanticKeywords } from '../ContextWeaver/utils/ContextProcessor';
 
@@ -27,6 +27,8 @@ const LatentSpaceNavigator = () => {
     const [selectedIdB, setSelectedIdB] = useState<string | null>(null);
     const [imagePrediction, setImagePrediction] = useState<any[]>([]);
     const [hiddenConcept, setHiddenConcept] = useState<string | null>(null);
+    const [isLoadingA, setIsLoadingA] = useState(false);
+    const [isLoadingB, setIsLoadingB] = useState(false);
 
     // Text State
     const textItems = useMemo(() => dataset.filter(item => item.type === 'text'), [dataset]);
@@ -39,6 +41,11 @@ const LatentSpaceNavigator = () => {
     const [isModelReady, setIsModelReady] = useState(false);
     const [isComputing, setIsComputing] = useState(false);
 
+    // Initialization State
+    const [initProgress, setInitProgress] = useState(0);
+    const [initStage, setInitStage] = useState('Initializing');
+    const [isInitializing, setIsInitializing] = useState(true);
+
     const [isSummarizing, setIsSummarizing] = useState(false);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -46,11 +53,28 @@ const LatentSpaceNavigator = () => {
     // Initial load and Dictionary Extension
     useEffect(() => {
         async function init() {
-            await Promise.all([
-                modelManager.loadModel(),
-                latentTextManager.loadModel()
-            ]);
-            setIsModelReady(true);
+            try {
+                await tf.ready();
+
+                // 1. Load Visual Model (MobileNet) - approx 30% of work
+                setInitStage('Synthesizing Visual Intelligence');
+                setInitProgress(0.1);
+                await modelManager.loadModel();
+                setInitProgress(0.3);
+
+                // 2. Load Semantic Model & Pre-compute Dictionary (MiniLM) - approx 70% of work
+                await latentTextManager.loadModel((stage, progress) => {
+                    setInitStage(`Synthesizing ${stage}`);
+                    // Map 0-1 from latentTextManager to 0.3-1.0 range
+                    setInitProgress(0.3 + (progress * 0.7));
+                });
+
+                setIsModelReady(true);
+                setIsInitializing(false);
+            } catch (err) {
+                console.error("Failed to initialize Latent Navigator", err);
+                setInitStage("Error: Failed to load models.");
+            }
         }
         init();
 
@@ -69,9 +93,21 @@ const LatentSpaceNavigator = () => {
             console.log("Latent Navigator: Extracting keywords from dataset to extend latent space...");
             const allKeywords = new Set<string>();
 
-            for (const item of textItems) {
-                const keywords = await extractSemanticKeywords(item.content as string, 20);
-                keywords.forEach((k: string) => allKeywords.add(k));
+            // Optimize: Process in chunks to avoid blocking the main thread
+            const chunkSize = 5;
+            for (let i = 0; i < textItems.length; i += chunkSize) {
+                const chunk = textItems.slice(i, i + chunkSize);
+                await Promise.all(chunk.map(async (item) => {
+                    try {
+                        const keywords = await extractSemanticKeywords(item.content as string, 20);
+                        keywords.forEach((k: string) => allKeywords.add(k));
+                    } catch (e) {
+                        console.warn("Skipping keyword extraction for item:", item.id);
+                    }
+                }));
+
+                // Small yield
+                await new Promise(r => setTimeout(r, 10));
             }
 
             if (allKeywords.size > 0) {
@@ -109,6 +145,14 @@ const LatentSpaceNavigator = () => {
         const item = dataset.find(i => i.id === itemId);
         if (!item || item.type !== 'image') return;
 
+        if (target === 'A') {
+            setIsLoadingA(true);
+            setSelectedIdA(itemId);
+        } else {
+            setIsLoadingB(true);
+            setSelectedIdB(itemId);
+        }
+
         const img = new Image();
         img.src = item.content as string;
         img.onload = () => {
@@ -117,12 +161,16 @@ const LatentSpaceNavigator = () => {
             if (target === 'A') {
                 if (imageA) imageA.dispose();
                 setImageA(tensor);
-                setSelectedIdA(itemId);
+                setIsLoadingA(false);
             } else {
                 if (imageB) imageB.dispose();
                 setImageB(tensor);
-                setSelectedIdB(itemId);
+                setIsLoadingB(false);
             }
+
+            // Clear predictions when changing source images
+            setImagePrediction([]);
+            setHiddenConcept(null);
         };
     };
 
@@ -354,15 +402,24 @@ const LatentSpaceNavigator = () => {
                                 {imageItems.map(item => (
                                     <div
                                         key={`A-${item.id}`}
-                                        onClick={() => loadImageFromItem(item.id, 'A')}
+                                        onClick={() => !isLoadingA && loadImageFromItem(item.id, 'A')}
                                         className={`cursor-pointer p-2 rounded-lg text-xs flex items-center gap-2 border transition-all
                                             ${selectedIdA === item.id ? 'bg-white border-main shadow-sm' : 'border-transparent hover:bg-white hover:border-gray-200'}
+                                            ${isLoadingA && selectedIdA === item.id ? 'opacity-50 pointer-events-none' : ''}
                                         `}
                                     >
-                                        <div className="w-8 h-8 rounded bg-gray-200 overflow-hidden shrink-0 border border-gray-100">
+                                        <div className="w-8 h-8 rounded bg-gray-200 overflow-hidden shrink-0 border border-gray-100 relative">
                                             <img src={item.content as string} className="w-full h-full object-cover" />
+                                            {isLoadingA && selectedIdA === item.id && (
+                                                <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                                                    <RefreshCw size={12} className="text-main animate-spin" />
+                                                </div>
+                                            )}
                                         </div>
-                                        <span className="truncate font-medium">{item.name}</span>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="truncate font-medium">{item.name}</span>
+                                            {isLoadingA && selectedIdA === item.id && <span className="text-[8px] font-bold text-main animate-pulse uppercase tracking-widest">Loading Tensor...</span>}
+                                        </div>
                                     </div>
                                 ))}
                                 {imageItems.length === 0 && <div className="text-[10px] text-text-muted italic p-4 text-center">No images found in dashboard.</div>}
@@ -375,15 +432,24 @@ const LatentSpaceNavigator = () => {
                                 {imageItems.map(item => (
                                     <div
                                         key={`B-${item.id}`}
-                                        onClick={() => loadImageFromItem(item.id, 'B')}
+                                        onClick={() => !isLoadingB && loadImageFromItem(item.id, 'B')}
                                         className={`cursor-pointer p-2 rounded-lg text-xs flex items-center gap-2 border transition-all
                                             ${selectedIdB === item.id ? 'bg-white border-secondary shadow-sm' : 'border-transparent hover:bg-white hover:border-gray-200'}
+                                            ${isLoadingB && selectedIdB === item.id ? 'opacity-50 pointer-events-none' : ''}
                                         `}
                                     >
-                                        <div className="w-8 h-8 rounded bg-gray-200 overflow-hidden shrink-0 border border-gray-100">
+                                        <div className="w-8 h-8 rounded bg-gray-200 overflow-hidden shrink-0 border border-gray-100 relative">
                                             <img src={item.content as string} className="w-full h-full object-cover" />
+                                            {isLoadingB && selectedIdB === item.id && (
+                                                <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                                                    <RefreshCw size={12} className="text-secondary animate-spin" />
+                                                </div>
+                                            )}
                                         </div>
-                                        <span className="truncate font-medium">{item.name}</span>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="truncate font-medium">{item.name}</span>
+                                            {isLoadingB && selectedIdB === item.id && <span className="text-[8px] font-bold text-secondary animate-pulse uppercase tracking-widest">Loading Tensor...</span>}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -457,12 +523,61 @@ const LatentSpaceNavigator = () => {
     );
 
     return (
-        <ToolLayout
-            title="Latent Space Navigator"
-            subtitle="Navigate the multi-dimensional vectors of AI meaning"
-            mainContent={mainContent}
-            sideContent={sideContent}
-        />
+        <div className="relative h-full">
+            <ToolLayout
+                title="Latent Space Navigator"
+                subtitle="Navigate the multi-dimensional vectors of AI meaning"
+                mainContent={mainContent}
+                sideContent={sideContent}
+            />
+
+            {/* Initialization Overlay */}
+            {isInitializing && (
+                <div className="absolute inset-0 z-[100] bg-white/95 backdrop-blur-md flex flex-col items-center justify-center p-12 text-center animate-in fade-in duration-500">
+                    <div className="max-w-md w-full">
+                        <div className="mb-8 relative">
+                            <div className="absolute inset-0 bg-main/10 rounded-full blur-3xl animate-pulse" />
+                            <BrainCircuit size={80} className="mx-auto text-main relative z-10 animate-bounce" />
+                        </div>
+
+                        <h2 className="text-2xl font-black text-gray-900 mb-2 uppercase tracking-tight">Initializing Latent Space</h2>
+                        <p className="text-gray-500 text-sm mb-8 font-medium">
+                            Synthesizing thousands of semantic relationships to build your navigation universe...
+                        </p>
+
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-end mb-1">
+                                <span className="text-[10px] font-black text-main uppercase tracking-widest">{initStage}</span>
+                                <span className="text-[10px] font-mono text-gray-400">{(initProgress * 100).toFixed(0)}%</span>
+                            </div>
+                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden border border-gray-100 shadow-inner">
+                                <div
+                                    className="h-full bg-main transition-all duration-500 ease-out shadow-[0_0_10px_rgba(var(--color-main-rgb),0.5)]"
+                                    style={{ width: `${initProgress * 100}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-12 flex items-center justify-center gap-6 opacity-40">
+                            <div className="flex flex-col items-center">
+                                <Layers size={20} className="mb-2" />
+                                <span className="text-[8px] font-bold uppercase tracking-widest text-gray-400">Layer Mapping</span>
+                            </div>
+                            <div className="w-8 h-px bg-gray-200" />
+                            <div className="flex flex-col items-center">
+                                <Wand2 size={20} className="mb-2" />
+                                <span className="text-[8px] font-bold uppercase tracking-widest text-gray-400">Vector Synthesis</span>
+                            </div>
+                            <div className="w-8 h-px bg-gray-200" />
+                            <div className="flex flex-col items-center">
+                                <Sparkles size={20} className="mb-2" />
+                                <span className="text-[8px] font-bold uppercase tracking-widest text-gray-400">Ready</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 

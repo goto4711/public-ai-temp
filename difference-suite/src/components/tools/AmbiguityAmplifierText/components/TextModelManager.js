@@ -1,38 +1,42 @@
-import * as use from '@tensorflow-models/universal-sentence-encoder';
+import { transformersManager } from '../../../../utils/TransformersManager';
 import * as knnClassifier from '@tensorflow-models/knn-classifier';
 
 class TextModelManager {
     constructor() {
-        this.model = null;
         this.classifier = null;
+        this.isReady = false;
     }
 
     async loadModel() {
-        if (this.model) return; // Already loaded
-        this.model = await use.load();
+        if (this.isReady) return;
         this.classifier = knnClassifier.create();
-        console.log("USE and KNN loaded for Ambiguity Amplifier Text");
+        this.isReady = true;
+        console.log("KNN Classifier initialized for Ambiguity Amplifier Text (Transformers.js backend)");
     }
 
     async addExample(text, label) {
-        console.log('[TextModelManager] addExample called:', { text: text?.substring(0, 50), label, modelReady: !!this.model, classifierReady: !!this.classifier });
-        if (!this.model || !this.classifier) {
-            console.warn('[TextModelManager] Model not ready, skipping addExample');
-            return;
+        console.log('[TextModelManager] addExample (Transformers.js):', { text: text?.substring(0, 50), label });
+        if (!this.isReady || !this.classifier) {
+            await this.loadModel();
         }
-        const embeddings = await this.model.embed([text]);
-        this.classifier.addExample(embeddings, label);
+
+        const embeddingArray = await transformersManager.getEmbeddings(text);
+        const tensor = tf.tensor2d([embeddingArray]);
+        this.classifier.addExample(tensor, label);
+
         console.log('[TextModelManager] Example added. Current counts:', this.classifier.getClassExampleCount());
-        embeddings.dispose();
+        tensor.dispose();
     }
 
     async predict(text) {
-        if (!this.model || !this.classifier) return null;
+        if (!this.isReady || !this.classifier) return null;
         if (this.classifier.getNumClasses() === 0) return null;
 
-        const embeddings = await this.model.embed([text]);
-        const result = await this.classifier.predictClass(embeddings);
-        embeddings.dispose();
+        const embeddingArray = await transformersManager.getEmbeddings(text);
+        const tensor = tf.tensor2d([embeddingArray]);
+        const result = await this.classifier.predictClass(tensor);
+
+        tensor.dispose();
         return result;
     }
 

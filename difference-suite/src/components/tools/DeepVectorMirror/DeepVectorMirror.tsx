@@ -2,59 +2,84 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { vectorManager } from './components/VectorManager';
 import VectorHeatmap from './components/VectorHeatmap';
 import { useSuiteStore } from '../../../stores/suiteStore';
-import { Info, Cpu, Image as ImageIcon, Type } from 'lucide-react';
+import { Info, Cpu, Image as ImageIcon, Type, Layers } from 'lucide-react';
 import ToolLayout from '../../shared/ToolLayout';
+import { transformersManager } from '../../../utils/TransformersManager';
 
 type AnalysisMode = 'image' | 'text';
 
 const AttentionLens = ({ text, isProcessing }: { text: string; isProcessing: boolean }) => {
-    const [tokens, setTokens] = useState<{ text: string; weight: number }[]>([]);
+    const [analysis, setAnalysis] = useState<{ tokens: string[], attention: number[] | null } | null>(null);
+    const [isInternalLoading, setIsInternalLoading] = useState(false);
 
     useEffect(() => {
         if (!text) return;
         const analyze = async () => {
+            setIsInternalLoading(true);
             try {
-                const { transformersManager } = await import('../../../utils/TransformersManager');
                 const result = await transformersManager.analyzeText(text);
-                // For this trial, we'll simulate "attention" by weighting based on token length/novelty
-                // In a full implementation, we'd extract actual cross-attention weights
-                const mockWeights = result.tokens.map((t: number, i: number) => ({
-                    text: text.split(' ')[i] || '', // Rough mapping for trial
-                    weight: Math.random() // Placeholder for real attention
-                }));
-                // Real implementation would use the tokenizer to decode tokens back to strings with weights
-                setTokens(text.split(/\s+/).map(word => ({
-                    text: word,
-                    weight: word.length > 3 ? 0.4 + Math.random() * 0.6 : 0.1 + Math.random() * 0.3
-                })));
+                setAnalysis(result);
             } catch (e) {
                 console.error("Attention analysis failed", e);
+            } finally {
+                setIsInternalLoading(false);
             }
         };
         analyze();
     }, [text]);
 
-    return (
-        <div className="flex flex-wrap gap-1 p-4 bg-white rounded border border-gray-100 min-h-[100px] content-start">
-            {isProcessing ? (
-                <div className="flex items-center justify-center w-full min-h-[80px]">
-                    <span className="text-xs text-main animate-pulse">Calculating Attention...</span>
+    if (isProcessing || isInternalLoading) {
+        return (
+            <div className="flex items-center justify-center w-full min-h-[100px] bg-gray-50/50">
+                <div className="flex flex-col items-center gap-2">
+                    <span className="text-[10px] font-black text-main animate-pulse uppercase tracking-[0.2em]">Inspecting Latent Layers</span>
+                    <div className="w-12 h-0.5 bg-gray-200 overflow-hidden rounded-full">
+                        <div className="h-full bg-main animate-progress-fast"></div>
+                    </div>
                 </div>
-            ) : tokens.map((token, i) => (
-                <span
-                    key={i}
-                    className="px-1 rounded text-sm transition-all duration-500"
-                    style={{
-                        backgroundColor: `rgba(131, 33, 97, ${token.weight * 0.4})`,
-                        color: token.weight > 0.6 ? 'var(--color-main)' : 'inherit',
-                        fontWeight: token.weight > 0.6 ? 'bold' : 'normal',
-                        transform: `scale(${0.95 + token.weight * 0.1})`
-                    }}
-                    title={`Attention Weight: ${(token.weight * 100).toFixed(1)}%`}
-                >
-                    {token.text}
-                </span>
-            ))}
+            </div>
+        );
+    }
+
+    if (!analysis) return null;
+
+    return (
+        <div className="flex flex-wrap gap-1.5 p-4 bg-white rounded border border-gray-100 min-h-[100px] content-start">
+            {analysis.tokens.map((token: string, i: number) => {
+                // Calculate weight from averaged attention matrix [seqLen * seqLen]
+                let weight = 0;
+                if (analysis.attention) {
+                    const seqLen = analysis.tokens.length;
+                    for (let j = 0; j < seqLen; j++) {
+                        // Matrix is pre-averaged across heads, we sum attention received by token i
+                        weight += analysis.attention[j * seqLen + i] || 0;
+                    }
+                    weight /= seqLen;
+                } else {
+                    weight = 0.1;
+                }
+
+                // Scale weight for better visualization visibility (boosted for clarity)
+                const displayWeight = Math.min(weight * 10, 1.0);
+
+                return (
+                    <span
+                        key={i}
+                        className="px-1.5 py-0.5 rounded text-[11px] font-mono transition-all duration-500 border"
+                        style={{
+                            backgroundColor: `rgba(var(--color-main-rgb), ${displayWeight * 0.7})`,
+                            color: displayWeight > 0.4 ? 'white' : 'var(--color-main)',
+                            borderColor: displayWeight > 0.4 ? 'rgba(var(--color-main-rgb), 0.3)' : 'transparent',
+                            fontWeight: displayWeight > 0.3 ? 'bold' : 'normal',
+                            transform: `scale(${0.98 + displayWeight * 0.15})`,
+                            zIndex: Math.floor(displayWeight * 10)
+                        }}
+                        title={`Token Attention: ${(weight * 100).toFixed(2)}%`}
+                    >
+                        {token.replace('Ġ', '').replace(' ', '')}
+                    </span>
+                );
+            })}
         </div>
     );
 };

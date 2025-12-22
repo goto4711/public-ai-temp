@@ -1,24 +1,63 @@
 import { useState } from 'react';
-import { Sparkles, Search, AlertTriangle, User, Split, Maximize } from 'lucide-react';
+import { Sparkles, AlertTriangle, User, Split, Maximize, Search, Database } from 'lucide-react';
 import PromptInput from './components/PromptInput';
 import GenerationGrid from './components/GenerationGrid';
 import AbsenceReport from './components/AbsenceReport';
 import { generateImages } from './utils/GeneratorEngine';
 import { analyzeBias } from './utils/BiasAnalyzer';
 import ToolLayout from '../../shared/ToolLayout';
+import { useSuiteStore } from '../../../stores/suiteStore';
+import { alignDatasetToPrompt } from './utils/DatasetAligner';
+import type { AlignmentResult } from './utils/DatasetAligner';
+
+const RealityMatches = ({ alignments, label }: { alignments: AlignmentResult[], label?: string }) => {
+    if (alignments.length === 0) return null;
+
+    return (
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-4 animate-in fade-in slide-in-from-bottom-2 duration-700">
+            <div className="bg-gray-50 px-3 py-1.5 border-b border-gray-100 flex items-center justify-between">
+                <span className="text-[10px] font-black text-main uppercase tracking-widest flex items-center gap-1.5">
+                    <Database size={10} />
+                    Dataset Alignment {label && `(${label})`}
+                </span>
+                <span className="text-[9px] text-text-muted italic">CLIP semantic match</span>
+            </div>
+            <div className="p-3">
+                <div className="grid grid-cols-3 gap-2">
+                    {alignments.map((match, i) => (
+                        <div key={i} className="group relative">
+                            <div className="aspect-square rounded bg-gray-100 overflow-hidden border border-gray-100 transition-transform group-hover:scale-105">
+                                <img src={match.url} alt={match.name} className="w-full h-full object-cover" />
+                                <div className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[8px] py-0.5 text-center font-bold">
+                                    {(match.score * 100).toFixed(0)}%
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <p className="text-[9px] text-text-muted mt-2 leading-tight">
+                    Top semantically similar items found in your dataset using multimodal CLIP alignment.
+                </p>
+            </div>
+        </div>
+    );
+};
 
 const ImaginationInspector = () => {
+    const { dataset } = useSuiteStore();
     const [mode, setMode] = useState<'single' | 'compare'>('single');
 
     // Side A (Default)
     const [promptA, setPromptA] = useState('');
     const [resultsA, setResultsA] = useState<any[]>([]);
     const [reportA, setReportA] = useState<any>(null);
+    const [alignmentsA, setAlignmentsA] = useState<AlignmentResult[]>([]);
 
     // Side B (Comparison)
     const [promptB, setPromptB] = useState('');
     const [resultsB, setResultsB] = useState<any[]>([]);
     const [reportB, setReportB] = useState<any>(null);
+    const [alignmentsB, setAlignmentsB] = useState<AlignmentResult[]>([]);
 
     const [loading, setLoading] = useState(false);
 
@@ -32,12 +71,16 @@ const ImaginationInspector = () => {
                 const genA = await generateImages(promptA);
                 setResultsA(genA);
                 setReportA(analyzeBias(genA));
+                const aliA = await alignDatasetToPrompt(promptA, dataset);
+                setAlignmentsA(aliA.slice(0, 3)); // Top 3 matches
             }
             // Run B if comparing
             if (mode === 'compare' && promptB.trim()) {
                 const genB = await generateImages(promptB);
                 setResultsB(genB);
                 setReportB(analyzeBias(genB));
+                const aliB = await alignDatasetToPrompt(promptB, dataset);
+                setAlignmentsB(aliB.slice(0, 3)); // Top 3 matches
             }
         } catch (error) {
             console.error("Generation failed:", error);
@@ -159,14 +202,18 @@ const ImaginationInspector = () => {
             )}
 
 
-            {/* Absence Report(s) */}
+            {/* Absence Report(s) & Reality Matches */}
             <div className="flex-1 flex flex-col gap-4 min-h-0 overflow-y-auto custom-scrollbar pt-2 border-t border-gray-100">
+                {alignmentsA.length > 0 && <RealityMatches alignments={alignmentsA} label={mode === 'compare' ? 'Side A' : ''} />}
+
                 {reportA && (
                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden shrink-0">
                         {mode === 'compare' && <div className="bg-gray-50 px-3 py-1 text-[10px] border-b border-gray-100 font-bold opacity-50 uppercase tracking-widest">Report A</div>}
                         <AbsenceReport report={reportA} />
                     </div>
                 )}
+
+                {alignmentsB.length > 0 && <RealityMatches alignments={alignmentsB} label="Side B" />}
 
                 {mode === 'compare' && reportB && (
                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden shrink-0">

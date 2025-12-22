@@ -86,7 +86,6 @@ const NoisePredictor = () => {
     useEffect(() => {
         const init = async () => {
             await tf.ready();
-            await latentTextManager.loadModel();
         };
         init();
     }, []);
@@ -111,7 +110,7 @@ const NoisePredictor = () => {
                 const emb = await latentTextManager.getEmbedding(content);
                 if (emb) {
                     setInputTensor(emb);
-                    await textModel.createModel(512, latentDim);
+                    await textModel.createModel(384, latentDim);
                 }
             }
         } catch (error) {
