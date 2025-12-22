@@ -38,10 +38,10 @@ class VectorManager {
             return Array.from(vector);
         } else if (mode === 'text') {
             // input is a string
-            const embeddings = await this.models.text.embed(input);
-            const vector = await embeddings.data();
-            embeddings.dispose();
-            return Array.from(vector);
+            // We use the new TransformersManager for superior embeddings
+            const { transformersManager } = await import('../../../../utils/TransformersManager');
+            const vector = await transformersManager.getEmbeddings(input);
+            return vector;
         } else if (mode === 'sound') {
             // input is spectrogram data (Float32Array)
             // For sound, we might just return the raw spectrogram frame as the "vector"
