@@ -8,7 +8,8 @@ import {
     Image as ImageIcon,
     Sliders,
     FileText,
-    Sparkles
+    Sparkles,
+    BrainCircuit
 } from 'lucide-react';
 
 export const TOOLS = [
@@ -77,5 +78,11 @@ export const TOOLS = [
         label: 'Threshold Adjuster',
         icon: Sliders,
         description: 'Fine-tune detection thresholds.'
+    },
+    {
+        path: '/semantic-oracle',
+        label: 'Semantic Oracle',
+        icon: BrainCircuit,
+        description: 'Consult the local intelligence for definitions and ideas.'
     },
 ];

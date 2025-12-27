@@ -15,6 +15,7 @@ import DiscontinuityDetector from './components/tools/DiscontinuityDetector/Disc
 import NoisePredictor from './components/tools/NoisePredictor/NoisePredictor';
 import ThresholdAdjuster from './components/tools/ThresholdAdjuster/ThresholdAdjuster';
 import ImaginationInspector from './components/tools/ImaginationInspector/ImaginationInspector';
+import SemanticOracle from './components/tools/SemanticOracle/SemanticOracle';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
             <Route path="/threshold-adjuster" element={<ThresholdAdjuster />} />
             <Route path="/noise-predictor" element={<NoisePredictor />} />
             <Route path="/imagination-inspector" element={<ImaginationInspector />} />
+            <Route path="/semantic-oracle" element={<SemanticOracle />} />
             <Route path="*" element={<div className="p-8 text-center text-xl">Tool Coming Soon...</div>} />
           </Routes>
         </AuthGuard>

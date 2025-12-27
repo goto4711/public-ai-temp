@@ -1,4 +1,4 @@
-import { pipeline, env, RawImage } from '@xenova/transformers';
+import { pipeline, env, RawImage, AutoTokenizer, AutoProcessor, CLIPTextModelWithProjection, CLIPVisionModelWithProjection } from '@xenova/transformers';
 
 // Configuration for Transformers.js
 // We use the default Hugging Face hub for model fetching
@@ -144,27 +144,52 @@ class TransformersManager {
      * Batch align a text prompt against multiple images
      */
     public async getMultimodalAlignmentBatch(text: string, imageUrls: string[], modelName: string = 'Xenova/clip-vit-base-patch32'): Promise<{ url: string, score: number }[]> {
-        const task = 'feature-extraction';
+        const task = 'split-multimodal-feature-extraction';
         const key = `${task}:${modelName}`;
 
-        await this.loadPipeline(task, modelName);
-        const p = this.pipelines.get(key);
+        let artifacts = this.pipelines.get(key);
 
-        // 1. Get text embedding once
-        const textOutput = await p(text);
-        const textEmb = textOutput.data;
+        if (!artifacts) {
+            console.log(`[TransformersManager] Loading split CLIP models: ${modelName}...`);
+            this.isLoading.set(key, true);
+            try {
+                // Load specific models for text and vision to avoid input ambiguity
+                const [tokenizer, processor, textModel, visionModel] = await Promise.all([
+                    AutoTokenizer.from_pretrained(modelName),
+                    AutoProcessor.from_pretrained(modelName),
+                    CLIPTextModelWithProjection.from_pretrained(modelName),
+                    CLIPVisionModelWithProjection.from_pretrained(modelName)
+                ]);
+                artifacts = { tokenizer, processor, textModel, visionModel };
+                this.pipelines.set(key, artifacts);
+                console.log(`[TransformersManager] Split CLIP models loaded.`);
+            } catch (e) {
+                console.error("Failed to load CLIP artifacts", e);
+                this.isLoading.set(key, false);
+                throw e;
+            }
+            this.isLoading.set(key, false);
+        }
+
+        const { tokenizer, processor, textModel, visionModel } = artifacts;
+
+        // 1. Get text embedding
+        const textInputs = await tokenizer([text], { padding: true, truncation: true, return_tensors: 'pt' });
+        const textOutput = await textModel(textInputs);
+        const textEmb = textOutput.text_embeds.data;
 
         const results: { url: string, score: number }[] = [];
 
-        // 2. Process images (in chunks of 4 to avoid memory pressure)
+        // 2. Process images
         const chunkSize = 4;
         for (let i = 0; i < imageUrls.length; i += chunkSize) {
             const chunk = imageUrls.slice(i, i + chunkSize);
             await Promise.all(chunk.map(async (url) => {
                 try {
                     const image = await RawImage.fromURL(url);
-                    const imageOutput = await p(image);
-                    const imageEmb = imageOutput.data;
+                    const imageInputs = await processor(image);
+                    const imageOutput = await visionModel(imageInputs);
+                    const imageEmb = imageOutput.image_embeds.data;
 
                     // Cosine similarity
                     let dotProduct = 0;
@@ -188,6 +213,7 @@ class TransformersManager {
 
         return results.sort((a, b) => b.score - a.score);
     }
+
 
     /**
      * Get raw attention/tokens (Attention Lens)
@@ -361,6 +387,75 @@ class TransformersManager {
             attention: averagedAttention,
             isSimulated: !attention || attention.length === 0
         };
+    }
+
+    /**
+     * Generate text using a Seq2Seq model (e.g., LaMini-Flan-T5)
+     * @param prompt The input prompt
+     * @param modelName The model to use
+     * @param options Generation options (max_new_tokens, temperature, etc.)
+     */
+    public async generateText(
+        prompt: string,
+        modelName: string = 'Xenova/LaMini-Flan-T5-783M',
+        options: any = {},
+        onProgress?: (progress: number) => void
+    ): Promise<string> {
+        const task = 'text2text-generation';
+        const key = `${task}:${modelName}`;
+
+        await this.loadPipeline(task, modelName, onProgress);
+        const p = this.pipelines.get(key);
+
+        console.log(`[TransformersManager] Generating text with ${modelName}...`);
+
+        // precise generation control
+        const generateOptions = {
+            max_new_tokens: 128,
+            temperature: 0.7,
+            repetition_penalty: 1.2,
+            do_sample: true,
+            ...options
+        };
+
+        const result = await p(prompt, generateOptions);
+        console.log('[TransformersManager] Generation result:', result);
+
+        // Result format: [{ generated_text: "..." }] or { generated_text: "..." }
+        if (Array.isArray(result)) {
+            return result[0].generated_text;
+        } else {
+            return result.generated_text;
+        }
+    }
+
+    /**
+     * Transcribe audio using Whisper model
+     * @param audioBlob The recorded audio blob
+     * @param modelName The Whisper model to use
+     */
+    public async transcribeAudio(audioBlob: Blob, modelName: string = 'Xenova/whisper-tiny.en', onProgress?: (progress: number) => void): Promise<string> {
+        const task = 'automatic-speech-recognition';
+        const key = `${task}:${modelName}`;
+
+        await this.loadPipeline(task, modelName, onProgress);
+        const p = this.pipelines.get(key);
+
+        console.log('[TransformersManager] Starting transcription...');
+
+        // Convert Blob to AudioBuffer
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        // Get channel data (Whisper expects mono 16kHz array or just raw audio array at 16k)
+        let audioData = audioBuffer.getChannelData(0);
+
+        const result = await p(audioData);
+        console.log('[TransformersManager] Transcription result:', result);
+
+        // Result format: { text: "..." } or array depending on options
+        return Array.isArray(result) ? result[0].text.trim() : result.text.trim();
     }
 }
 
