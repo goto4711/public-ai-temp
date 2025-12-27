@@ -191,8 +191,9 @@ class TransformersManager {
 
     /**
      * Get raw attention/tokens (Attention Lens)
-     */
-    public async analyzeText(text: string, modelName: string = 'Xenova/all-MiniLM-L6-v2') {
+     * string = 'Xenova/all-MiniLM-L6-v2'
+     
+    public async analyzeText(text: string, modelName: string = 'Xenova/bert-base-uncased') {
         const task = 'feature-extraction';
         const key = `${task}:${modelName}`;
 
@@ -206,6 +207,10 @@ class TransformersManager {
             normalize: true,
             output_attentions: true
         });
+        // ADD THIS DEBUG - CRITICAL!
+        console.log('[TransformersManager] Raw result keys:', Object.keys(result));
+        console.log('[TransformersManager] Has attentions?', !!result.attentions);
+        console.log('[TransformersManager] Full result:', result);
 
         const tokens = p.tokenizer.encode(text);
         const decodedTokens = tokens.map((t: number) => p.tokenizer.decode([t]));
@@ -237,6 +242,14 @@ class TransformersManager {
             for (let i = 0; i < matrixSize; i++) {
                 averagedAttention[i] /= heads;
             }
+
+            console.log('[TransformersManager] Attention Diagnostics:', {
+                dims,
+                seqLen,
+                tokensLen: decodedTokens.length,
+                sumAll: averagedAttention.reduce((a, b) => a + b, 0),
+                sample: averagedAttention.slice(0, 10)
+            });
         }
 
         return {
@@ -248,6 +261,105 @@ class TransformersManager {
                 heads: attention?.[0]?.dims?.[1] || 0,
                 seqLength: tokens.length
             }
+        };
+    }
+    */
+
+    public async analyzeText(text: string, modelName: string = 'Xenova/bert-base-uncased') {
+        const task = 'feature-extraction';
+        const key = `${task}:${modelName}`;
+
+        await this.loadPipeline(task, modelName);
+        const p = this.pipelines.get(key);
+
+        // Get the tokenizer and model from the pipeline
+        const tokenizer = p.tokenizer;
+        const model = p.model;
+
+        // Tokenize the text
+        const inputs = await tokenizer(text, { return_tensors: 'pt' });
+
+        // Run model with attention outputs
+        const outputs = await model({
+            ...inputs,
+            output_attentions: true
+        });
+
+        console.log('[TransformersManager] Model output keys:', Object.keys(outputs));
+        console.log('[TransformersManager] Has attentions?', !!outputs.attentions);
+
+        const tokens = tokenizer.encode(text);
+        const decodedTokens = tokens.map((t: number) => tokenizer.decode([t]));
+
+        // Extract attention from the outputs
+        const attention = outputs.attentions as any[];
+        let averagedAttention: number[] | null = null;
+        const seqLen = tokens.length; // Use actual token length from tokenizer output
+        const matrixSize = seqLen * seqLen;
+
+        if (attention && attention.length > 0) {
+            const lastLayer = attention[attention.length - 1];
+            const data = lastLayer.data as Float32Array;
+            // Dimensions checking
+            // ... (rest of processing logic if real attention exists)
+            const dims = lastLayer.dims;
+            const heads = dims[1];
+            // Ensure dims match expected shape for robustness
+
+            averagedAttention = new Array(matrixSize).fill(0);
+
+            // Sum across all heads
+            for (let h = 0; h < heads; h++) {
+                const headOffset = h * matrixSize;
+                // Safety check for data length
+                if (data.length >= headOffset + matrixSize) {
+                    for (let i = 0; i < matrixSize; i++) {
+                        averagedAttention[i] += data[headOffset + i];
+                    }
+                }
+            }
+
+            // Divide by number of heads
+            for (let i = 0; i < matrixSize; i++) {
+                averagedAttention[i] /= heads;
+            }
+        } else {
+            console.warn('[TransformersManager] No attention weights returned by model. Falling back to simulation for visualization.');
+
+            // SIMULATED ATTENTION FALLBACK
+            // Create a "focused" attention pattern where words pay attention to themselves and neighbors
+            averagedAttention = new Array(matrixSize).fill(0);
+
+            for (let i = 0; i < seqLen; i++) { // For each target token (row)
+                for (let j = 0; j < seqLen; j++) { // For each source token (col)
+                    // Self-attention (diagonal) is strong
+                    let val = (i === j) ? 0.5 : 0;
+
+                    // Neighbor attention
+                    if (Math.abs(i - j) === 1) val += 0.2;
+
+                    // Random "semantic" noise based on token length/char codes to be deterministic
+                    const pseudoRandom = (tokens[j] % 100) / 200;
+                    val += pseudoRandom;
+
+                    averagedAttention[i * seqLen + j] = val;
+                }
+            }
+        }
+
+        // Common diagnostic log
+        console.log('[TransformersManager] Attention Diagnostics:', {
+            simulated: !attention || attention.length === 0,
+            seqLen,
+            tokensLen: decodedTokens.length,
+            sumAll: averagedAttention.reduce((a, b) => a + b, 0),
+            sample: averagedAttention.slice(0, 10)
+        });
+
+        return {
+            tokens: decodedTokens,
+            attention: averagedAttention,
+            isSimulated: !attention || attention.length === 0
         };
     }
 }

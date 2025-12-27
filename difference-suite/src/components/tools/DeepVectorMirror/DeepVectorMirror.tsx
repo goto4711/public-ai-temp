@@ -8,8 +8,9 @@ import { transformersManager } from '../../../utils/TransformersManager';
 
 type AnalysisMode = 'image' | 'text';
 
+
 const AttentionLens = ({ text, isProcessing }: { text: string; isProcessing: boolean }) => {
-    const [analysis, setAnalysis] = useState<{ tokens: string[], attention: number[] | null } | null>(null);
+    const [analysis, setAnalysis] = useState<{ tokens: string[], attention: number[] | null, isSimulated?: boolean } | null>(null);
     const [isInternalLoading, setIsInternalLoading] = useState(false);
 
     useEffect(() => {
@@ -44,43 +45,62 @@ const AttentionLens = ({ text, isProcessing }: { text: string; isProcessing: boo
     if (!analysis) return null;
 
     return (
-        <div className="flex flex-wrap gap-1.5 p-4 bg-white rounded border border-gray-100 min-h-[100px] content-start">
-            {analysis.tokens.map((token: string, i: number) => {
-                // Calculate weight from averaged attention matrix [seqLen * seqLen]
-                let weight = 0;
-                if (analysis.attention) {
-                    const seqLen = analysis.tokens.length;
-                    for (let j = 0; j < seqLen; j++) {
-                        // Matrix is pre-averaged across heads, we sum attention received by token i
-                        weight += analysis.attention[j * seqLen + i] || 0;
-                    }
-                    weight /= seqLen;
-                } else {
-                    weight = 0.1;
-                }
-
-                // Scale weight for better visualization visibility (boosted for clarity)
-                const displayWeight = Math.min(weight * 10, 1.0);
-
-                return (
-                    <span
-                        key={i}
-                        className="px-1.5 py-0.5 rounded text-[11px] font-mono transition-all duration-500 border"
-                        style={{
-                            backgroundColor: `rgba(var(--color-main-rgb), ${displayWeight * 0.7})`,
-                            color: displayWeight > 0.4 ? 'white' : 'var(--color-main)',
-                            borderColor: displayWeight > 0.4 ? 'rgba(var(--color-main-rgb), 0.3)' : 'transparent',
-                            fontWeight: displayWeight > 0.3 ? 'bold' : 'normal',
-                            transform: `scale(${0.98 + displayWeight * 0.15})`,
-                            zIndex: Math.floor(displayWeight * 10)
-                        }}
-                        title={`Token Attention: ${(weight * 100).toFixed(2)}%`}
-                    >
-                        {token.replace('Ġ', '').replace(' ', '')}
+        <>
+            <div className="px-4 py-2 border-b border-gray-200 bg-white flex items-center gap-2 justify-between">
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Attention Lens</span>
+                </div>
+                {analysis.isSimulated && (
+                    <span className="text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded border border-amber-100 font-medium uppercase tracking-tight" title="Real attention weights not available from this model">
+                        Simulated
                     </span>
-                );
-            })}
-        </div>
+                )}
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 p-4 bg-white rounded-b min-h-[100px] content-start">
+                {analysis.tokens.map((token: string, i: number) => {
+                    // Calculate weight from averaged attention matrix [seqLen * seqLen]
+                    let weight = 0;
+                    if (analysis.attention) {
+                        const seqLen = analysis.tokens.length;
+                        for (let j = 0; j < seqLen; j++) {
+                            // Matrix is pre-averaged across heads, we sum attention received by token i
+                            weight += analysis.attention[j * seqLen + i] || 0;
+                        }
+                        weight /= seqLen;
+                    } else {
+                        weight = 0.1;
+                    }
+
+                    // Scale weight for better visualization visibility
+                    const displayWeight = Math.min(weight * 5, 1.0);
+
+                    return (
+                        <span
+                            key={i}
+                            className="px-1.5 py-0.5 rounded text-[11px] font-mono transition-all duration-500 border"
+                            style={{
+                                backgroundColor: `rgba(var(--color-main-rgb), ${displayWeight * 0.7})`,
+                                color: displayWeight > 0.4 ? 'white' : 'var(--color-main)',
+                                borderColor: displayWeight > 0.4 ? 'rgba(var(--color-main-rgb), 0.3)' : 'transparent',
+                                fontWeight: displayWeight > 0.4 ? 'bold' : 'normal',
+                                transform: `scale(${0.98 + displayWeight * 0.1})`,
+                                zIndex: Math.floor(displayWeight * 10)
+                            }}
+                            title={`Token Attention: ${(weight * 100).toFixed(2)}%`}
+                        >
+                            {token.replace('Ġ', '').replace(' ', '')}
+                        </span>
+                    );
+                })}
+            </div>
+
+            <div className="px-4 py-2 bg-white/50 text-[9px] text-text-muted italic border-t border-gray-100">
+                {analysis.isSimulated
+                    ? "Model optimized for web: simulating attention patterns based on token structure."
+                    : "Visualizes the real \"Transformer Attention\"—highlighting which words contribute most to the vector."}
+            </div>
+        </>
     );
 };
 
@@ -224,14 +244,7 @@ const DeepVectorMirror = () => {
 
                             {mode === 'text' && (
                                 <div className="flex-1 flex flex-col bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-                                    <div className="px-4 py-2 border-b border-gray-200 bg-white flex items-center gap-2">
-                                        <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Attention Lens</span>
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-alt/30 text-main rounded font-bold uppercase">New</span>
-                                    </div>
                                     <AttentionLens text={selectedItem.content as string} isProcessing={isProcessing} />
-                                    <div className="px-4 py-2 bg-white/50 text-[9px] text-text-muted italic">
-                                        Visualizes the "Transformer Attention"—highlighting which words contribute most to the mathematical vector.
-                                    </div>
                                 </div>
                             )}
                         </div>
