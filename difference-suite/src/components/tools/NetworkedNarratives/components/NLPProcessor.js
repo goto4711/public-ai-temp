@@ -50,6 +50,29 @@ export class NLPProcessor {
         places.forEach(p => addNode(p, 'place'));
         orgs.forEach(p => addNode(p, 'org'));
 
+        // Extract High-Relevance Concepts (Nouns/Topics)
+        // This enables "Golden Key" or "Table" to be detected for visual matching
+        const topics = doc.topics().out('array');
+        const nouns = doc.nouns().out('array');
+
+        // Merge and filter
+        const concepts = [...new Set([...topics, ...nouns])].filter(c => {
+            const lower = c.toLowerCase();
+            // Filter out existing entities
+            if (nodeMap.has(lower)) return false;
+            // Filter out short words/noise
+            if (lower.length < 3) return false;
+            // Filter out common stopwords (basic list)
+            const stops = ['the', 'and', 'from', 'that', 'with', 'this', 'what', 'where', 'when', 'there'];
+            if (stops.includes(lower)) return false;
+
+            return true;
+        });
+
+        // Limit concepts to avoid graph explosion (Top 15 longest/most complex?)
+        // Or just add them. Let's add them but type is 'concept'
+        concepts.slice(0, 15).forEach(c => addNode(c, 'concept'));
+
         // Add custom entities if they appear in the text (case-insensitive)
         const lowerText = text.toLowerCase();
         customEntities.forEach(ent => {

@@ -1,9 +1,9 @@
 import React from 'react';
-import { Search, Info } from 'lucide-react';
+import { Search, Info, Mic } from 'lucide-react';
 
 const SUPPORTED_KEYWORDS = ["CEO", "Nurse", "Terrorist", "Professor", "Criminal", "Worker"];
 
-const PromptInput = ({ prompt, setPrompt, onGenerate, loading, label = "Probe the Latent Space" }) => {
+const PromptInput = ({ prompt, setPrompt, onGenerate, loading, label = "Probe the Latent Space", onMicClick }) => {
     return (
         <div className="flex flex-col gap-3">
             <div className="flex justify-between items-end">
@@ -25,6 +25,13 @@ const PromptInput = ({ prompt, setPrompt, onGenerate, loading, label = "Probe th
                     className="flex-1 p-3 border border-gray-300 rounded font-mono text-sm focus:outline-none focus:border-[var(--color-main)] focus:ring-1 focus:ring-[var(--color-main)] transition-all"
                     onKeyDown={(e) => e.key === 'Enter' && onGenerate && onGenerate()}
                 />
+                <button
+                    onClick={onMicClick}
+                    className="bg-gray-100 text-[var(--color-main)] p-3 rounded hover:bg-gray-200 transition-all border border-gray-200"
+                    title="Voice Input"
+                >
+                    <Mic size={20} />
+                </button>
                 {onGenerate && (
                     <button
                         onClick={onGenerate}

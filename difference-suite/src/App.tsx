@@ -16,6 +16,7 @@ import NoisePredictor from './components/tools/NoisePredictor/NoisePredictor';
 import ThresholdAdjuster from './components/tools/ThresholdAdjuster/ThresholdAdjuster';
 import ImaginationInspector from './components/tools/ImaginationInspector/ImaginationInspector';
 import SemanticOracle from './components/tools/SemanticOracle/SemanticOracle';
+import VisualStoryteller from './components/tools/VisualStoryteller/VisualStoryteller';
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
             <Route path="/noise-predictor" element={<NoisePredictor />} />
             <Route path="/imagination-inspector" element={<ImaginationInspector />} />
             <Route path="/semantic-oracle" element={<SemanticOracle />} />
+            <Route path="/visual-storyteller" element={<VisualStoryteller />} />
             <Route path="*" element={<div className="p-8 text-center text-xl">Tool Coming Soon...</div>} />
           </Routes>
         </AuthGuard>

@@ -85,4 +85,10 @@ export const TOOLS = [
         icon: BrainCircuit,
         description: 'Consult the local intelligence for definitions and ideas.'
     },
+    {
+        path: '/visual-storyteller',
+        label: 'Visual Storyteller',
+        icon: FileText,
+        description: 'Generate AI captions from images.'
+    },
 ];

@@ -9,6 +9,7 @@ import ToolLayout from '../../shared/ToolLayout';
 import { useSuiteStore } from '../../../stores/suiteStore';
 import { alignDatasetToPrompt } from './utils/DatasetAligner';
 import type { AlignmentResult } from './utils/DatasetAligner';
+import { AudioRecorderModal } from '../../dashboard/modals/AudioRecorderModal';
 
 const RealityMatches = ({ alignments, label }: { alignments: AlignmentResult[], label?: string }) => {
     if (alignments.length === 0) return null;
@@ -61,6 +62,10 @@ const ImaginationInspector = () => {
 
     const [loading, setLoading] = useState(false);
 
+    // Voice Input State
+    const [isMicOpen, setIsMicOpen] = useState(false);
+    const [targetVoiceInput, setTargetVoiceInput] = useState<'A' | 'B'>('A');
+
     const handleGenerate = async () => {
         if (!promptA.trim() && !promptB.trim()) return;
         setLoading(true);
@@ -86,6 +91,14 @@ const ImaginationInspector = () => {
             console.error("Generation failed:", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleVoiceCapture = (text: string) => {
+        if (targetVoiceInput === 'A') {
+            setPromptA(text);
+        } else {
+            setPromptB(text);
         }
     };
 
@@ -172,6 +185,10 @@ const ImaginationInspector = () => {
                     onGenerate={mode === 'single' ? handleGenerate : undefined}
                     loading={loading}
                     label={mode === 'compare' ? "Prompt A" : "Prompt"}
+                    onMicClick={() => {
+                        setTargetVoiceInput('A');
+                        setIsMicOpen(true);
+                    }}
                 />
             </div>
 
@@ -185,6 +202,10 @@ const ImaginationInspector = () => {
                         onGenerate={undefined} // Manual run button only for compare
                         loading={loading}
                         label="Prompt B"
+                        onMicClick={() => {
+                            setTargetVoiceInput('B');
+                            setIsMicOpen(true);
+                        }}
                     />
                 </div>
             )}
@@ -222,6 +243,13 @@ const ImaginationInspector = () => {
                     </div>
                 )}
             </div>
+
+            <AudioRecorderModal
+                isOpen={isMicOpen}
+                onClose={() => setIsMicOpen(false)}
+                onCapture={() => { }} // We don't need the file, we use onTranscribeCapture
+                onTranscribeCapture={(text) => handleVoiceCapture(text)}
+            />
         </div>
     );
 

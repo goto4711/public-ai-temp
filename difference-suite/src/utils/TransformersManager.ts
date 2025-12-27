@@ -457,6 +457,54 @@ class TransformersManager {
         // Result format: { text: "..." } or array depending on options
         return Array.isArray(result) ? result[0].text.trim() : result.text.trim();
     }
+
+    /**
+     * Generate caption for an image using image-to-text model
+     * @param imageSource URL or data URL of the image
+     * @param modelName The model to use (default: vit-gpt2-image-captioning)
+     * @param onProgress Progress callback for model loading
+     */
+    public async captionImage(
+        imageSource: string,
+        modelName: string = 'Xenova/vit-gpt2-image-captioning',
+        onProgress?: (progress: number) => void
+    ): Promise<string> {
+        const task = 'image-to-text';
+        const key = `${task}:${modelName}`;
+
+        try {
+            await this.loadPipeline(task, modelName, onProgress);
+            const p = this.pipelines.get(key);
+
+            if (!p) {
+                throw new Error('Pipeline not loaded');
+            }
+
+            console.log('[TransformersManager] Generating image caption for:', imageSource.substring(0, 50) + '...');
+
+            // Load image using RawImage
+            const image = await RawImage.fromURL(imageSource);
+            console.log('[TransformersManager] Image loaded, dimensions:', image.width, 'x', image.height);
+
+            // Use sampling with temperature for varied captions
+            const result = await p(image, {
+                max_new_tokens: 50,
+                do_sample: true,
+                temperature: 0.9,
+                top_k: 50,
+            });
+            console.log('[TransformersManager] Caption result:', result);
+
+            // Result format: [{ generated_text: "..." }]
+            if (Array.isArray(result) && result.length > 0) {
+                return result[0].generated_text;
+            }
+            return 'No caption generated';
+        } catch (error) {
+            console.error('[TransformersManager] Caption generation error:', error);
+            throw error;
+        }
+    }
 }
 
 export const transformersManager = TransformersManager.getInstance();

@@ -112,7 +112,12 @@ export const AudioRecorderModal: React.FC<AudioRecorderModalProps> = ({ isOpen, 
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             const file = new File([text], `transcript-${timestamp}.txt`, { type: 'text/plain' });
 
-            onCapture(file);
+            if (onTranscribeCapture) {
+                onTranscribeCapture(text);
+            } else {
+                onCapture(file);
+            }
+
             onClose();
         } catch (e) {
             console.error("Transcription failed", e);
