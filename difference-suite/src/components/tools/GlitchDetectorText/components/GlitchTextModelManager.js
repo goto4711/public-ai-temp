@@ -1,4 +1,5 @@
 import { transformersManager } from '../../../../utils/TransformersManager';
+import * as tf from '@tensorflow/tfjs';
 import * as knnClassifier from '@tensorflow-models/knn-classifier';
 
 class GlitchTextModelManager {
